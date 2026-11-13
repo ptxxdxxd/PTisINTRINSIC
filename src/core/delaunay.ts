@@ -11,6 +11,11 @@
  * cotan Laplacian of the result has non-negative weights, which gives it a
  * maximum principle.
  *
+ * Flips may produce parallel edges, loops and faces that repeat a vertex (a
+ * Δ-complex). The intrinsic Delaunay triangulation sometimes needs them, so
+ * they are allowed (see TriangleMesh.flipEdge), and with them every
+ * non-Delaunay edge can be flipped.
+ *
  * Bobenko and Springborn, "A Discrete Laplace–Beltrami Operator for Simplicial
  * Surfaces", Discrete Comput. Geom. 38, 2007; Sharp, Soliman and Crane,
  * "Navigating Intrinsic Triangulations", ACM TOG 38(4), 2019.
@@ -40,11 +45,6 @@ export interface IntrinsicDelaunayResult {
   readonly mesh: TriangleMesh;
   readonly lengths: Float64Array;
   readonly flips: number;
-  /**
-   * Non-Delaunay edges left because flipping them would join two vertices
-   * that are already joined. Empty for every surface the library generates.
-   */
-  readonly blocked: number[];
 }
 
 /**
@@ -61,7 +61,6 @@ export function intrinsicDelaunay(
   const queue = nonDelaunayEdges(mesh, lengths);
   const queued = new Uint8Array(mesh.edgeCount);
   for (const e of queue) queued[e] = 1;
-  const blocked = new Set<number>();
   // Termination is guaranteed in exact arithmetic; this guard turns a
   // floating-point cycle, should one ever occur, into an error.
   const flipLimit = options.maxFlips ?? 50 * mesh.edgeCount + 1000;
@@ -72,11 +71,10 @@ export function intrinsicDelaunay(
     if (mesh.isBoundaryEdge(e) || edgeWeight(mesh, lengths, e) >= -DELAUNAY_TOLERANCE) continue;
 
     const newLength = flippedLength(mesh, lengths, e);
-    if (!mesh.flipEdge(e)) {
-      blocked.add(e);
-      continue;
-    }
-    blocked.delete(e);
+    // flipEdge refuses only boundary edges and edges with both halfedges in
+    // one face. The second kind faces the two base angles of an isosceles
+    // triangle, whose cotangents are positive, so it is never non-Delaunay.
+    if (!mesh.flipEdge(e)) throw new Error(`non-Delaunay edge ${e} could not be flipped`);
     lengths[e] = newLength;
     if (++flips > flipLimit) {
       throw new Error(`edge flipping did not terminate within ${flipLimit} flips`);
@@ -96,12 +94,7 @@ export function intrinsicDelaunay(
       }
     }
   }
-  return {
-    mesh,
-    lengths,
-    flips,
-    blocked: [...blocked].filter((e) => edgeWeight(mesh, lengths, e) < -DELAUNAY_TOLERANCE),
-  };
+  return { mesh, lengths, flips };
 }
 
 /** Cotan weight of an interior edge, from its two faces. */

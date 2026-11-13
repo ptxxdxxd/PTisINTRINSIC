@@ -20,20 +20,44 @@ export interface SymmetricEigen {
   readonly vectors: Float64Array;
 }
 
+export interface SymmetricEigenOptions {
+  /**
+   * QL iterations allowed per eigenvalue before giving up with an error. The
+   * implicit shifts converge in two or three iterations in practice.
+   */
+  readonly maxIterations?: number;
+}
+
 /**
  * Eigen-decomposition of a symmetric matrix given as a row-major n × n array.
  * Only the lower triangle is read.
  */
-export function symmetricEigen(matrix: Float64Array, n: number): SymmetricEigen {
+export function symmetricEigen(
+  matrix: Float64Array,
+  n: number,
+  options: SymmetricEigenOptions = {},
+): SymmetricEigen {
   if (!Number.isInteger(n) || n < 1 || matrix.length !== n * n) {
     throw new RangeError(`expected an ${n} x ${n} matrix, got ${matrix.length} entries`);
   }
-  // W starts as A, which is symmetric, so its layout does not matter yet.
-  const w = new Float64Array(n * n);
+  // Scale by a power of two so the largest entry lies in [1, 2), as LAPACK's
+  // dsyev scales by its norm. The scaling is exact, and it keeps the deflation
+  // threshold eps · ||T|| a normal number and the rotations clear of overflow
+  // however small or large A is.
+  let largest = 0;
   for (let i = 0; i < n; i++) {
     for (let j = 0; j <= i; j++) {
       const x = matrix[i * n + j];
       if (!Number.isFinite(x)) throw new RangeError(`entry (${i}, ${j}) is not finite`);
+      largest = Math.max(largest, Math.abs(x));
+    }
+  }
+  const exponent = largest === 0 ? 0 : Math.floor(Math.log2(largest));
+  // W starts as A, which is symmetric, so its layout does not matter yet.
+  const w = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      const x = timesPowerOfTwo(matrix[i * n + j], -exponent);
       w[i * n + j] = x;
       w[j * n + i] = x;
     }
@@ -41,8 +65,24 @@ export function symmetricEigen(matrix: Float64Array, n: number): SymmetricEigen 
   const d = new Float64Array(n);
   const e = new Float64Array(n);
   tridiagonalize(w, d, e, n);
-  diagonalize(w, d, e, n);
+  diagonalize(w, d, e, n, options.maxIterations ?? 64);
+  for (let k = 0; k < n; k++) d[k] = timesPowerOfTwo(d[k], exponent);
   return { values: d, vectors: w };
+}
+
+/** x · 2^k, in steps so that 2^k itself never overflows or underflows. */
+function timesPowerOfTwo(x: number, k: number): number {
+  let y = x;
+  let rest = k;
+  while (rest > 1000) {
+    y *= 2 ** 1000;
+    rest -= 1000;
+  }
+  while (rest < -1000) {
+    y *= 2 ** -1000;
+    rest += 1000;
+  }
+  return y * 2 ** rest;
 }
 
 /** Householder reduction to tridiagonal form (EISPACK tred2). JAMA's V[r][c] is w[c·n + r]. */
@@ -128,16 +168,29 @@ function tridiagonalize(w: Float64Array, d: Float64Array, e: Float64Array, n: nu
 }
 
 /** Implicit QL iteration on the tridiagonal matrix, then sort (EISPACK tql2). */
-function diagonalize(w: Float64Array, d: Float64Array, e: Float64Array, n: number): void {
+function diagonalize(
+  w: Float64Array,
+  d: Float64Array,
+  e: Float64Array,
+  n: number,
+  maxIterations: number,
+): void {
   for (let i = 1; i < n; i++) e[i - 1] = e[i];
   e[n - 1] = 0;
 
   let f = 0;
+  // A subdiagonal entry below eps · ||T|| is set to zero, which perturbs T by
+  // no more than the rounding of the iteration itself. JAMA, like EISPACK's
+  // tql2, compares against the running maximum of |d| + |e| over the rows
+  // reached so far instead. When the leading rows are tiny next to the rest,
+  // that maximum times eps underflows to 0, no entry ever counts as small,
+  // and the shift (d[l+1] − d[l]) / 2e[l] overflows (a fuzzed 4 × 4 matrix
+  // with entries from 1e-14 down to 1e-322 came back NaN).
   let tst1 = 0;
+  for (let l = 0; l < n; l++) tst1 = Math.max(tst1, Math.abs(d[l]) + Math.abs(e[l]));
   const eps = 2 ** -52;
   for (let l = 0; l < n; l++) {
     // Find a small subdiagonal element.
-    tst1 = Math.max(tst1, Math.abs(d[l]) + Math.abs(e[l]));
     let m = l;
     while (m < n && Math.abs(e[m]) > eps * tst1) m++;
 
@@ -145,7 +198,7 @@ function diagonalize(w: Float64Array, d: Float64Array, e: Float64Array, n: numbe
     if (m > l) {
       let iterations = 0;
       do {
-        if (++iterations > 64) {
+        if (++iterations > maxIterations) {
           throw new Error(`QL iteration did not converge for eigenvalue ${l}`);
         }
         // Compute the implicit shift.

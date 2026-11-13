@@ -90,6 +90,7 @@ describe('TriangleMesh topology', () => {
         for (let e = 0; e < mesh.edgeCount; e++) {
           expect(mesh.halfedgeEdge[mesh.edgeHalfedge[e]]).toBe(e);
         }
+        mesh.validateConnectivity();
       }),
     );
   });
@@ -136,5 +137,61 @@ describe('TriangleMesh validation', () => {
     const tetra = (a: number, b: number, c: number) => [0, a, b, 0, b, c, 0, c, a, a, c, b];
     const faces = [...tetra(1, 2, 3), ...tetra(4, 5, 6)];
     expect(() => TriangleMesh.fromFaces(7, faces)).toThrow(/single fan/);
+  });
+});
+
+describe('TriangleMesh.validateConnectivity', () => {
+  // Square 0-1-2-3 split along 0–2. Halfedges: 0 0→1, 1 1→2, 2 2→0 | 3 0→2,
+  // 4 2→3, 5 3→0. Only 2 and 3 are twins.
+  const square = () => TriangleMesh.fromFaces(4, [0, 1, 2, 0, 2, 3]);
+
+  it('accepts a valid mesh', () => {
+    expect(() => {
+      square().validateConnectivity();
+    }).not.toThrow();
+  });
+
+  it.each<[string, (m: TriangleMesh) => void, RegExp]>([
+    ['a vertex out of range', (m) => (m.halfedgeVertex[0] = 9), /vertex 9 out of range/],
+    ['an edge out of range', (m) => (m.halfedgeEdge[0] = 9), /edge 9 out of range/],
+    ['a halfedge that is its own twin', (m) => (m.halfedgeTwin[2] = 2), /twin 2 disagree/],
+    [
+      'twins on different edges',
+      (m) => (m.halfedgeEdge[3] = m.halfedgeEdge[0]),
+      /lie on different edges/,
+    ],
+    ['twins in the same direction', (m) => (m.halfedgeVertex[2] = 1), /opposite directions/],
+    [
+      'an edge pointing at another edge',
+      (m) => (m.edgeHalfedge[m.halfedgeEdge[0]] = 1),
+      /points at a halfedge of another edge/,
+    ],
+    [
+      'an interior edge whose halfedges lost their twins',
+      (m) => {
+        m.halfedgeTwin[2] = -1;
+        m.halfedgeTwin[3] = -1;
+      },
+      /has 2 halfedges/,
+    ],
+    [
+      'a vertex storing a halfedge of another vertex',
+      (m) => (m.vertexHalfedge[1] = 0),
+      /not the tail/,
+    ],
+    [
+      'a boundary vertex storing an interior halfedge',
+      (m) => (m.vertexHalfedge[0] = 3),
+      /single fan/,
+    ],
+  ])('rejects %s', (_, corrupt, message) => {
+    const mesh = square();
+    corrupt(mesh);
+    expect(() => {
+      mesh.validateConnectivity();
+    }).toThrow(MeshError);
+    expect(() => {
+      mesh.validateConnectivity();
+    }).toThrow(message);
   });
 });

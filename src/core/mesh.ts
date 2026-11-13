@@ -188,9 +188,16 @@ export class TriangleMesh {
    * two faces, with the other diagonal. Only the connectivity changes; new
    * edge lengths are the caller's business. The edge keeps its index.
    *
-   * Returns false, changing nothing, when the edge is on the boundary or the
-   * other diagonal already exists (flipping would make two edges join the same
-   * pair of vertices).
+   * The result need not be a simplicial complex: two edges may join the same
+   * pair of vertices, an edge may be a loop, and a face may use one vertex
+   * twice. That is a Δ-complex, and the intrinsic Delaunay triangulation of
+   * some meshes is only reachable through one (Fisher et al. 2007; libigl's
+   * intrinsic_delaunay_triangulation documents the same). Such meshes cannot
+   * be rebuilt with fromFaces; use validateConnectivity to check them.
+   *
+   * Returns false, changing nothing, when the edge is on the boundary or both
+   * of its halfedges lie in one face (an endpoint of degree 1), where there is
+   * no quadrilateral to flip.
    *
    * Before, with h0 = i→j in face f0 and h1 = j→i in face f1:
    *     f0 = (i, j, k),  f1 = (j, i, l)
@@ -200,7 +207,7 @@ export class TriangleMesh {
   flipEdge(e: number): boolean {
     const h0 = this.edgeHalfedge[e];
     const h1 = this.halfedgeTwin[h0];
-    if (h1 === -1) return false;
+    if (h1 === -1 || halfedgeFace(h0) === halfedgeFace(h1)) return false;
     const vertex = this.halfedgeVertex;
     const twin = this.halfedgeTwin;
     const edge = this.halfedgeEdge;
@@ -212,13 +219,13 @@ export class TriangleMesh {
     const h1p = prevHalfedge(h1);
     const k = vertex[h0p];
     const l = vertex[h1p];
-    // A boundary edge has only one halfedge, so look in both directions.
-    if (k === l || this.findHalfedge(k, l) !== -1 || this.findHalfedge(l, k) !== -1) return false;
 
     const f0 = 3 * halfedgeFace(h0);
     const f1 = 3 * halfedgeFace(h1);
     // The four outer halfedges keep their direction, edge and twin but move to
-    // new slots: j→k, l→j in f0 and k→i, i→l in f1.
+    // new slots: l→j, j→k in f0 and k→i, i→l in f1. Two of them can be twins
+    // of each other (the two faces share a second edge), so twins are looked
+    // up by their new slot.
     const outer = [
       { from: h1p, to: f0, tail: l },
       { from: h0n, to: f0 + 1, tail: j },
@@ -228,10 +235,11 @@ export class TriangleMesh {
     const movedTo = new Map(outer.map((m) => [m.from, m.to]));
 
     for (const m of outer) {
+      const t = m.twin === -1 ? -1 : (movedTo.get(m.twin) ?? m.twin);
       vertex[m.to] = m.tail;
       edge[m.to] = m.edge;
-      twin[m.to] = m.twin;
-      if (m.twin !== -1) twin[m.twin] = m.to;
+      twin[m.to] = t;
+      if (t !== -1) twin[t] = m.to;
       this.edgeHalfedge[m.edge] = m.to;
     }
     vertex[f0 + 2] = k;
@@ -243,14 +251,62 @@ export class TriangleMesh {
     this.edgeHalfedge[e] = f0 + 2;
 
     // Repoint any vertex whose stored halfedge moved or disappeared. Boundary
-    // vertices only ever store an outer (boundary) halfedge, which moved.
-    for (const v of [i, j, k, l]) {
+    // vertices only ever store an outer (boundary) halfedge, which moved. The
+    // four corners need not be distinct, and each must be repointed once.
+    for (const v of new Set([i, j, k, l])) {
       const stored = this.vertexHalfedge[v];
       const moved = movedTo.get(stored);
       if (moved !== undefined) this.vertexHalfedge[v] = moved;
       else if (stored === h0 || stored === h1) this.vertexHalfedge[v] = v === i ? f1 + 1 : f0 + 1;
     }
     return true;
+  }
+
+  /**
+   * Checks every halfedge invariant; throws MeshError describing the first
+   * one broken. Meant for tests and debugging: fromFaces already guarantees
+   * these, and flipEdge preserves them. Unlike fromFaces it accepts Δ-complex
+   * connectivity (parallel edges, loops, faces that repeat a vertex).
+   */
+  validateConnectivity(): void {
+    const halfedges = this.halfedgeVertex.length;
+    const fail = (message: string): never => {
+      throw new MeshError(message);
+    };
+    const halfedgesPerEdge = new Int32Array(this.edgeCount);
+    const corners = new Int32Array(this.vertexCount);
+    for (let h = 0; h < halfedges; h++) {
+      const v = this.halfedgeVertex[h];
+      if (!(v >= 0 && v < this.vertexCount)) fail(`halfedge ${h} has vertex ${v} out of range`);
+      corners[v]++;
+      const e = this.halfedgeEdge[h];
+      if (!(e >= 0 && e < this.edgeCount)) fail(`halfedge ${h} has edge ${e} out of range`);
+      halfedgesPerEdge[e]++;
+      const t = this.halfedgeTwin[h];
+      if (t === -1) continue;
+      if (t === h || this.halfedgeTwin[t] !== h) fail(`halfedge ${h} and its twin ${t} disagree`);
+      if (this.halfedgeEdge[t] !== e) fail(`halfedge ${h} and its twin lie on different edges`);
+      if (this.halfedgeVertex[t] !== this.tipVertex(h) || this.tipVertex(t) !== v) {
+        fail(`halfedge ${h} and its twin do not run in opposite directions`);
+      }
+    }
+    for (let e = 0; e < this.edgeCount; e++) {
+      const h = this.edgeHalfedge[e];
+      if (this.halfedgeEdge[h] !== e) fail(`edge ${e} points at a halfedge of another edge`);
+      const expected = this.halfedgeTwin[h] === -1 ? 1 : 2;
+      if (halfedgesPerEdge[e] !== expected) fail(`edge ${e} has ${halfedgesPerEdge[e]} halfedges`);
+    }
+    for (let v = 0; v < this.vertexCount; v++) {
+      const h = this.vertexHalfedge[v];
+      if (this.halfedgeVertex[h] !== v)
+        fail(`vertex ${v} points at a halfedge it is not the tail of`);
+      // Walking the fan from the stored halfedge must reach every corner at v.
+      // That also catches a boundary vertex storing an interior halfedge: the
+      // walk would stop at the boundary early.
+      if (this.outgoingHalfedges(v).length !== corners[v]) {
+        fail(`the faces around vertex ${v} do not form a single fan`);
+      }
+    }
   }
 
   /** Head vertex of a halfedge. */
@@ -274,7 +330,10 @@ export class TriangleMesh {
     do {
       result.push(h);
       h = this.nextOutgoing(h);
-    } while (h !== -1 && h !== start && result.length <= this.faceCount);
+      // Guards against looping forever on corrupted connectivity. A vertex can
+      // have more corners than there are faces (a face of a Δ-complex may use
+      // it twice), but never more than there are halfedges.
+    } while (h !== -1 && h !== start && result.length < this.halfedgeVertex.length);
     return result;
   }
 

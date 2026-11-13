@@ -15,7 +15,7 @@ export {
   type VertexAreaScheme,
 } from './geometry.ts';
 export { cornerCotangents, cotanLaplacian, cotanWeights } from './laplacian.ts';
-export { symmetricEigen, type SymmetricEigen } from './eigen.ts';
+export { symmetricEigen, type SymmetricEigen, type SymmetricEigenOptions } from './eigen.ts';
 export { MeshError, TriangleMesh, halfedgeFace, nextHalfedge, prevHalfedge } from './mesh.ts';
 export { mulberry32 } from './random.ts';
 export {

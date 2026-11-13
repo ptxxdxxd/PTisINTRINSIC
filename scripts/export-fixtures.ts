@@ -32,7 +32,7 @@ import {
   vertexAreas,
   vertexCurvature,
   type Surface,
-  type TriangleMesh,
+  TriangleMesh,
 } from '../src/core/index.ts';
 
 const outputDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'oracle', 'fixtures');
@@ -163,7 +163,14 @@ function meshFixture(
   );
   const laplacian = cotanLaplacian(mesh, lengths);
   const delaunay = intrinsicDelaunay(mesh, lengths);
-  if (delaunay.blocked.length > 0) throw new Error(`${name}: flips blocked`);
+  // The oracle checks the flipped faces with libigl, which rebuilds edges from
+  // the face list and so would merge parallel edges. Only simplicial results
+  // make that check meaningful.
+  try {
+    TriangleMesh.fromFaces(delaunay.mesh.vertexCount, delaunay.mesh.halfedgeVertex);
+  } catch (error) {
+    throw new Error(`${name}: flipped mesh is not simplicial`, { cause: error });
+  }
   const fixture: MeshFixture = {
     name,
     kind: positions === undefined ? 'intrinsic' : 'embedded',

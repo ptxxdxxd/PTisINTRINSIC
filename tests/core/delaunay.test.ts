@@ -18,6 +18,7 @@ import {
   validateEdgeLengths,
   vertexCurvature,
 } from '../../src/core/index.ts';
+import { ellipsoid } from '../support/closed-surfaces.ts';
 import { randomIntrinsicMetric, randomOpenSurface } from '../support/random-surfaces.ts';
 
 describe('TriangleMesh.flipEdge', () => {
@@ -32,47 +33,74 @@ describe('TriangleMesh.flipEdge', () => {
     expect(rebuilt.edgeCount).toBe(mesh.edgeCount);
   });
 
-  it('refuses boundary edges and flips that would duplicate an edge', () => {
+  it('refuses only boundary edges and edges with both halfedges in one face', () => {
     const square = TriangleMesh.fromFaces(4, [0, 1, 2, 0, 2, 3]);
     expect(square.flipEdge(square.halfedgeEdge[square.findHalfedge(0, 1)])).toBe(false);
-    // In a tetrahedron every pair of vertices is already joined.
+
+    // In a tetrahedron every pair of vertices is already joined, so any flip
+    // makes a parallel edge. Those are allowed.
     const tetrahedron = TriangleMesh.fromFaces(4, [0, 1, 2, 0, 2, 3, 0, 3, 1, 1, 3, 2]);
-    for (let e = 0; e < tetrahedron.edgeCount; e++) expect(tetrahedron.flipEdge(e)).toBe(false);
+    for (let e = 0; e < tetrahedron.edgeCount; e++) {
+      const mesh = tetrahedron.clone();
+      expect(mesh.flipEdge(e)).toBe(true);
+      mesh.validateConnectivity();
+      expect(edgePairs(mesh).size).toBe(mesh.edgeCount - 1);
+    }
+
+    // A pillow: two triangles glued along all three edges. Both faces of 0–1
+    // have third vertex 2, so the flip makes the loop 2–2 and leaves 0 and 1
+    // with degree 1. Edge 1–2 then has both halfedges in one face.
+    const pillow = TriangleMesh.fromFaces(3, [0, 1, 2, 1, 0, 2]);
+    const diagonal = pillow.halfedgeEdge[pillow.findHalfedge(0, 1)];
+    const side = pillow.halfedgeEdge[pillow.findHalfedge(1, 2)];
+    expect(pillow.flipEdge(diagonal)).toBe(true);
+    pillow.validateConnectivity();
+    expect(pillow.edgeVertices(diagonal)).toEqual([2, 2]);
+    expect(pillow.outgoingHalfedges(0)).toHaveLength(1);
+    expect(pillow.flipEdge(side)).toBe(false);
+    // Flipping the loop gives 0–1 back.
+    expect(pillow.flipEdge(diagonal)).toBe(true);
+    pillow.validateConnectivity();
+    expect(pillow.edgeVertices(diagonal).sort()).toEqual([0, 1]);
   });
 
-  it('refuses a flip onto a boundary edge whose only halfedge runs the other way', () => {
-    // Regression: found by the property test below (counterexample n = 2,
-    // picks [488192355, 1808445752, 1877117490, 24171969]).
+  it('stays valid when a flip duplicates a boundary edge', () => {
+    // Found by the property test below (n = 2, picks [488192355, 1808445752,
+    // 1877117490, 24171969]): the new edge runs opposite to the only halfedge
+    // of an existing boundary edge.
     const mesh = plane({ resolution: 2 }).mesh.clone();
     for (const pick of [488192355, 1808445752, 1877117490, 24171969]) {
       mesh.flipEdge(pick % mesh.edgeCount);
     }
-    expect(() => TriangleMesh.fromFaces(mesh.vertexCount, mesh.halfedgeVertex)).not.toThrow();
+    mesh.validateConnectivity();
+    expect(edgePairs(mesh).size).toBeLessThan(mesh.edgeCount);
   });
 
   it('keeps the mesh valid through any sequence of flips', () => {
+    const meshes = fc.oneof(
+      fc.integer({ min: 1, max: 8 }).map((n) => plane({ resolution: n }).mesh),
+      fc.integer({ min: 2, max: 5 }).map((n) => ellipsoid(n, n + 1, [1, 1, 1]).mesh),
+    );
     fc.assert(
-      fc.property(
-        fc.integer({ min: 2, max: 8 }),
-        fc.array(fc.nat(), { maxLength: 40 }),
-        (n, picks) => {
-          const mesh = plane({ resolution: n }).mesh.clone();
-          for (const pick of picks) mesh.flipEdge(pick % mesh.edgeCount);
-          const rebuilt = TriangleMesh.fromFaces(mesh.vertexCount, mesh.halfedgeVertex);
-          expect(rebuilt.edgeCount).toBe(mesh.edgeCount);
-          expect(Array.from(rebuilt.halfedgeTwin)).toEqual(Array.from(mesh.halfedgeTwin));
-          for (let v = 0; v < mesh.vertexCount; v++) {
-            const fan = mesh.outgoingHalfedges(v);
-            expect(fan).toHaveLength(rebuilt.outgoingHalfedges(v).length);
-            expect(mesh.isBoundaryVertex(v)).toBe(rebuilt.isBoundaryVertex(v));
-          }
-          for (let e = 0; e < mesh.edgeCount; e++) {
-            expect(mesh.halfedgeEdge[mesh.edgeHalfedge[e]]).toBe(e);
-          }
-        },
-      ),
-      // Before the fix for boundary edges, about 1 in 1,900 random flip
-      // sequences failed here; enough runs to catch a regression like that.
+      fc.property(meshes, fc.array(fc.nat(), { maxLength: 60 }), (input, picks) => {
+        const mesh = input.clone();
+        for (const pick of picks) {
+          const e = pick % mesh.edgeCount;
+          const before = mesh.edgeVertices(e).sort();
+          if (!mesh.flipEdge(e)) continue;
+          // A second flip restores the edge; a third redoes the first.
+          expect(mesh.flipEdge(e)).toBe(true);
+          expect(mesh.edgeVertices(e).sort()).toEqual(before);
+          expect(mesh.flipEdge(e)).toBe(true);
+        }
+        mesh.validateConnectivity();
+        expect(mesh.eulerCharacteristic()).toBe(input.eulerCharacteristic());
+        for (let v = 0; v < mesh.vertexCount; v++) {
+          expect(mesh.isBoundaryVertex(v)).toBe(input.isBoundaryVertex(v));
+        }
+      }),
+      // Before boundary edges were handled, about 1 in 1,900 random flip
+      // sequences broke the mesh; enough runs to catch a regression like that.
       { numRuns: 2000 },
     );
   });
@@ -96,7 +124,7 @@ describe('intrinsicDelaunay', () => {
       fc.property(nonDelaunaySurface, ({ mesh, lengths }) => {
         const before = { mesh: mesh.clone(), lengths: lengths.slice() };
         const result = intrinsicDelaunay(mesh, lengths);
-        expect(result.blocked).toEqual([]);
+        result.mesh.validateConnectivity();
         expect(nonDelaunayEdges(result.mesh, result.lengths)).toEqual([]);
         validateEdgeLengths(result.mesh, result.lengths);
         // Same metric, different triangles: curvature and area are unchanged.
@@ -173,15 +201,46 @@ describe('intrinsicDelaunay', () => {
     }
   });
 
-  it('reports edges it cannot flip', () => {
-    // A flattened tetrahedron: the long edge 0–1 faces two angles near π, but
+  it('reaches Delaunay through a parallel edge', () => {
+    // A flattened tetrahedron: the long edge 0–1 faces two angles near π, and
     // its other diagonal 2–3 is already an edge.
     const positions = Float64Array.of(-1, 0, 0, 1, 0, 0, 0, 0.1, 0, 0, -0.1, 0.01);
     const mesh = TriangleMesh.fromFaces(4, [0, 1, 2, 1, 0, 3, 0, 2, 3, 1, 3, 2]);
-    const lengths = edgeLengthsFromPositions(mesh, positions);
-    const result = intrinsicDelaunay(mesh, lengths);
-    expect(result.flips).toBe(0);
-    expect(result.blocked).toContain(mesh.halfedgeEdge[mesh.findHalfedge(0, 1)]);
+    const result = expectDelaunayOfSameSurface(mesh, edgeLengthsFromPositions(mesh, positions));
+    expect(result.flips).toBeGreaterThan(0);
+    expect(edgePairs(result.mesh).size).toBeLessThan(result.mesh.edgeCount);
+  });
+
+  it('reaches Delaunay through a loop', () => {
+    // A pillow of two triangles with sides 1.9, 1, 1. The long edge faces two
+    // angles of 143.6°; its flip is a loop at vertex 2 whose length follows
+    // from unfolding both faces around vertex 0, where each has angle
+    // acos(0.95): 2 sin(acos 0.95) = 2√(1 − 0.95²).
+    const mesh = TriangleMesh.fromFaces(3, [0, 1, 2, 1, 0, 2]);
+    const long = mesh.halfedgeEdge[mesh.findHalfedge(0, 1)];
+    const lengths = new Float64Array(mesh.edgeCount).fill(1);
+    lengths[long] = 1.9;
+    const result = expectDelaunayOfSameSurface(mesh, lengths);
+    expect(result.flips).toBe(1);
+    expect(result.mesh.edgeVertices(long)).toEqual([2, 2]);
+    expect(result.lengths[long]).toBeCloseTo(2 * Math.sqrt(1 - 0.95 ** 2), 15);
+  });
+
+  it('reaches Delaunay on a narrow bump that needs a loop', () => {
+    // One of 20 in a sweep of 3,000 random bumps that stopped short of
+    // Delaunay while flips that create loops or parallel edges were refused.
+    const s = gaussianBump({
+      resolution: 10,
+      jitter: 0.15736119030043483,
+      seed: 279462913,
+      height: -1.4975862205028534,
+      width: 0.13635363595094532,
+    });
+    const result = expectDelaunayOfSameSurface(s.mesh, s.lengths);
+    const loops = Array.from({ length: result.mesh.edgeCount }, (_, e) =>
+      result.mesh.edgeVertices(e),
+    ).filter(([a, b]) => a === b);
+    expect(loops.length).toBeGreaterThan(0);
   });
 
   it('stops with an error instead of looping forever', () => {
@@ -195,4 +254,29 @@ describe('intrinsicDelaunay', () => {
 function withFlips(s: { mesh: TriangleMesh; lengths: Float64Array }): [TriangleMesh, Float64Array] {
   const result = intrinsicDelaunay(s.mesh, s.lengths);
   return [result.mesh, result.lengths];
+}
+
+/** Distinct unordered vertex pairs joined by an edge; fewer than edgeCount means parallel edges or loops. */
+function edgePairs(mesh: TriangleMesh): Set<string> {
+  const pairs = new Set<string>();
+  for (let e = 0; e < mesh.edgeCount; e++) {
+    const [a, b] = mesh.edgeVertices(e);
+    pairs.add(a < b ? `${a}-${b}` : `${b}-${a}`);
+  }
+  return pairs;
+}
+
+/** Runs intrinsicDelaunay and checks the result is valid, Delaunay, and the same surface. */
+function expectDelaunayOfSameSurface(mesh: TriangleMesh, lengths: Float64Array) {
+  const result = intrinsicDelaunay(mesh, lengths);
+  result.mesh.validateConnectivity();
+  validateEdgeLengths(result.mesh, result.lengths);
+  expect(nonDelaunayEdges(result.mesh, result.lengths)).toEqual([]);
+  const k0 = vertexCurvature(mesh, cornerAngles(mesh, lengths));
+  const k1 = vertexCurvature(result.mesh, cornerAngles(result.mesh, result.lengths));
+  for (let v = 0; v < k0.length; v++) expect(Math.abs(k1[v] - k0[v])).toBeLessThan(1e-12);
+  const a0 = compensatedSum(faceAreas(mesh, lengths));
+  const a1 = compensatedSum(faceAreas(result.mesh, result.lengths));
+  expect(Math.abs(a1 - a0)).toBeLessThanOrEqual(1e-12 * a0);
+  return result;
 }
