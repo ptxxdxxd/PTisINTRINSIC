@@ -1,0 +1,13 @@
+# Differential-test suite. Exact pins; numpy and scipy dropped Python 3.11 in
+# their current releases, so 3.11 gets the newest versions that still support it.
+libigl==2.6.3
+potpourri3d==1.4.0
+numpy==2.4.6; python_version < "3.12"
+numpy==2.5.4; python_version >= "3.12"
+scipy==1.17.1; python_version < "3.12"
+scipy==1.18.1; python_version >= "3.12"
+mpmath==1.4.1
+meshio==5.3.5
+pytest==9.2.0
+ruff==0.17.5
+mypy==2.4.1
