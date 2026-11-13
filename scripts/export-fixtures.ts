@@ -21,10 +21,12 @@ import {
   faceEdgeLengths,
   gaussianBump,
   intrinsicDelaunay,
+  laplacianSpectrum,
   mulberry32,
   plane,
   saddle,
   sphericalCap,
+  symmetricEigen,
   triangleAngle,
   triangleArea,
   vertexAreas,
@@ -61,6 +63,8 @@ interface MeshFixture {
       faceEdgeLengths: number[][];
       laplacian: number[][];
     };
+    /** Full spectrum of L φ = λ M φ with the barycentric lumped mass. */
+    spectrum: { values: number[]; vectors: number[][] };
     /** L u = 0 inside, u = boundaryValues on the boundary, solved by conjugate gradients. */
     dirichlet: {
       boundaryValues: number[];
@@ -68,6 +72,40 @@ interface MeshFixture {
       relativeResidual: number;
     };
   };
+}
+
+/** All eigenvalues and the first `count` eigenfunctions. */
+function spectrumOf(stiffness: CsrMatrix, mass: Float64Array, count: number) {
+  const { values, vectors } = laplacianSpectrum(stiffness, mass);
+  const n = mass.length;
+  return {
+    values: Array.from(values),
+    vectors: Array.from({ length: count }, (_, k) =>
+      Array.from(vectors.subarray(k * n, (k + 1) * n)),
+    ),
+  };
+}
+
+/** Random symmetric matrices of assorted sizes, with Intrinsic's eigen-decomposition. */
+function symmetricMatrices() {
+  const random = mulberry32(31337);
+  return [1, 2, 3, 5, 10, 20, 40, 80, 150].map((n) => {
+    const a = new Float64Array(n * n);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j <= i; j++) {
+        a[i * n + j] = 200 * random() - 100;
+        a[j * n + i] = a[i * n + j];
+      }
+    }
+    const { values, vectors } = symmetricEigen(a, n);
+    return {
+      matrix: Array.from({ length: n }, (_, i) => Array.from(a.subarray(i * n, (i + 1) * n))),
+      values: Array.from(values),
+      vectors: Array.from({ length: n }, (_, k) =>
+        Array.from(vectors.subarray(k * n, (k + 1) * n)),
+      ),
+    };
+  });
 }
 
 function faceList(mesh: TriangleMesh): number[][] {
@@ -140,6 +178,7 @@ function meshFixture(
       barycentricAreas: Array.from(vertexAreas(mesh, lengths, 'barycentric')),
       mixedAreas: Array.from(vertexAreas(mesh, lengths, 'mixed')),
       laplacian: triplets(laplacian),
+      spectrum: spectrumOf(laplacian, vertexAreas(mesh, lengths, 'barycentric'), 12),
       delaunay: {
         flips: delaunay.flips,
         faces: faceList(delaunay.mesh),
@@ -223,6 +262,10 @@ for (const fixture of meshes) {
 }
 const needleList = needles();
 writeFileSync(join(outputDirectory, 'needles.json'), JSON.stringify(needleList));
+writeFileSync(
+  join(outputDirectory, 'symmetric-matrices.json'),
+  JSON.stringify(symmetricMatrices()),
+);
 console.log(
-  `wrote ${meshes.length} meshes and ${needleList.length} needle triangles to ${outputDirectory}`,
+  `wrote ${meshes.length} meshes, ${needleList.length} needle triangles and the symmetric matrices to ${outputDirectory}`,
 );

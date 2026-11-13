@@ -42,6 +42,10 @@ class MeshFixture:
         default_factory=lambda: np.empty(0, np.float64)
     )
     dirichlet_solution: NDArray[np.float64] = field(default_factory=lambda: np.empty(0, np.float64))
+    spectrum_values: NDArray[np.float64] = field(default_factory=lambda: np.empty(0, np.float64))
+    spectrum_vectors: NDArray[np.float64] = field(
+        default_factory=lambda: np.empty((0, 0), np.float64)
+    )
 
     @property
     def vertex_count(self) -> int:
@@ -70,7 +74,7 @@ def _read(path: Path) -> Any:
 def mesh_fixtures() -> list[MeshFixture]:
     fixtures = []
     for path in sorted(FIXTURE_DIRECTORY.glob("*.json")):
-        if path.name == "needles.json":
+        if path.name in ("needles.json", "symmetric-matrices.json"):
             continue
         raw = _read(path)
         results = raw["results"]
@@ -95,6 +99,8 @@ def mesh_fixtures() -> list[MeshFixture]:
                 delaunay_laplacian=_floats(results["delaunay"]["laplacian"]),
                 dirichlet_boundary_values=_floats(results["dirichlet"]["boundaryValues"]),
                 dirichlet_solution=_floats(results["dirichlet"]["solution"]),
+                spectrum_values=_floats(results["spectrum"]["values"]),
+                spectrum_vectors=_floats(results["spectrum"]["vectors"]),
             )
         )
     return fixtures
@@ -110,4 +116,29 @@ def needles() -> list[Needle]:
             angles=cast(tuple[float, float, float], tuple(item["angles"])),
         )
         for item in _read(FIXTURE_DIRECTORY / "needles.json")
+    ]
+
+
+@dataclass(frozen=True)
+class SymmetricCase:
+    matrix: NDArray[np.float64]
+    values: NDArray[np.float64]
+    # Row k is the eigenvector for values[k].
+    vectors: NDArray[np.float64]
+
+    def __repr__(self) -> str:
+        return f"n={self.values.size}"
+
+
+def symmetric_cases() -> list[SymmetricCase]:
+    path = FIXTURE_DIRECTORY / "symmetric-matrices.json"
+    if not path.is_file():
+        return []
+    return [
+        SymmetricCase(
+            matrix=_floats(item["matrix"]),
+            values=_floats(item["values"]),
+            vectors=_floats(item["vectors"]),
+        )
+        for item in _read(path)
     ]

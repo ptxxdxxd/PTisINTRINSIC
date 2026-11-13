@@ -15,6 +15,7 @@ export {
   type VertexAreaScheme,
 } from './geometry.ts';
 export { cornerCotangents, cotanLaplacian, cotanWeights } from './laplacian.ts';
+export { symmetricEigen, type SymmetricEigen } from './eigen.ts';
 export { MeshError, TriangleMesh, halfedgeFace, nextHalfedge, prevHalfedge } from './mesh.ts';
 export { mulberry32 } from './random.ts';
 export {
@@ -23,6 +24,14 @@ export {
   type ConjugateGradientResult,
 } from './solvers.ts';
 export { CsrMatrix } from './sparse.ts';
+export {
+  DENSE_EIGEN_LIMIT,
+  heatTrace,
+  laplacianSpectrum,
+  spectralDimension,
+  squareNeumannHeatTrace,
+  type LaplacianSpectrum,
+} from './spectrum.ts';
 export { compensatedSum } from './summation.ts';
 export {
   cone,
