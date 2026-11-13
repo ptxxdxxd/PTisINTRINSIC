@@ -12,11 +12,15 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  CsrMatrix,
+  conjugateGradient,
   cone,
   cornerAngles,
+  cotanLaplacian,
   faceAreas,
   faceEdgeLengths,
   gaussianBump,
+  intrinsicDelaunay,
   mulberry32,
   plane,
   saddle,
@@ -48,7 +52,65 @@ interface MeshFixture {
     vertexCurvature: number[];
     barycentricAreas: number[];
     mixedAreas: number[];
+    /** Cotan stiffness matrix as (row, column, value) triplets. */
+    laplacian: number[][];
+    /** The intrinsic Delaunay triangulation of the same metric. */
+    delaunay: {
+      flips: number;
+      faces: number[][];
+      faceEdgeLengths: number[][];
+      laplacian: number[][];
+    };
+    /** L u = 0 inside, u = boundaryValues on the boundary, solved by conjugate gradients. */
+    dirichlet: {
+      boundaryValues: number[];
+      solution: number[];
+      relativeResidual: number;
+    };
   };
+}
+
+function faceList(mesh: TriangleMesh): number[][] {
+  return Array.from({ length: mesh.faceCount }, (_, f) =>
+    Array.from(mesh.halfedgeVertex.subarray(3 * f, 3 * f + 3)),
+  );
+}
+
+function lengthsPerFace(mesh: TriangleMesh, lengths: Float64Array): number[][] {
+  return Array.from({ length: mesh.faceCount }, (_, f) => faceEdgeLengths(mesh, lengths, f));
+}
+
+function triplets(matrix: CsrMatrix): number[][] {
+  return Array.from(matrix.entries());
+}
+
+/** Solves L u = 0 with u = g on the boundary, by conjugate gradients on the interior block. */
+function dirichlet(mesh: TriangleMesh, laplacian: CsrMatrix, g: (v: number) => number) {
+  const index = new Int32Array(mesh.vertexCount).fill(-1);
+  const interior: number[] = [];
+  for (let v = 0; v < mesh.vertexCount; v++) {
+    if (!mesh.isBoundaryVertex(v)) index[v] = interior.push(v) - 1;
+  }
+  const rows: number[] = [];
+  const cols: number[] = [];
+  const values: number[] = [];
+  const rhs = new Float64Array(interior.length);
+  for (const [i, j, x] of laplacian.entries()) {
+    if (index[i] === -1) continue;
+    if (index[j] === -1) rhs[index[i]] -= x * g(j);
+    else {
+      rows.push(index[i]);
+      cols.push(index[j]);
+      values.push(x);
+    }
+  }
+  const matrix = CsrMatrix.fromTriplets(interior.length, interior.length, rows, cols, values);
+  const result = conjugateGradient(matrix, rhs, { tolerance: 1e-12 });
+  if (!result.converged) throw new Error('Dirichlet solve did not converge');
+  const boundaryValues = Array.from({ length: mesh.vertexCount }, (_, v) => g(v));
+  const solution = boundaryValues.slice();
+  interior.forEach((v, k) => (solution[v] = result.x[k]));
+  return { boundaryValues, solution, relativeResidual: result.relativeResidual };
 }
 
 function meshFixture(
@@ -58,20 +120,18 @@ function meshFixture(
   positions: Float64Array | undefined,
 ): MeshFixture {
   const angles = cornerAngles(mesh, lengths);
-  const faces: number[][] = [];
-  const perFaceLengths: number[][] = [];
-  const perFaceAngles: number[][] = [];
-  for (let f = 0; f < mesh.faceCount; f++) {
-    faces.push(Array.from(mesh.halfedgeVertex.subarray(3 * f, 3 * f + 3)));
-    perFaceLengths.push(faceEdgeLengths(mesh, lengths, f));
-    perFaceAngles.push(Array.from(angles.subarray(3 * f, 3 * f + 3)));
-  }
+  const perFaceAngles = Array.from({ length: mesh.faceCount }, (_, f) =>
+    Array.from(angles.subarray(3 * f, 3 * f + 3)),
+  );
+  const laplacian = cotanLaplacian(mesh, lengths);
+  const delaunay = intrinsicDelaunay(mesh, lengths);
+  if (delaunay.blocked.length > 0) throw new Error(`${name}: flips blocked`);
   const fixture: MeshFixture = {
     name,
     kind: positions === undefined ? 'intrinsic' : 'embedded',
     vertexCount: mesh.vertexCount,
-    faces,
-    faceEdgeLengths: perFaceLengths,
+    faces: faceList(mesh),
+    faceEdgeLengths: lengthsPerFace(mesh, lengths),
     results: {
       faceAreas: Array.from(faceAreas(mesh, lengths)),
       cornerAngles: perFaceAngles,
@@ -79,6 +139,15 @@ function meshFixture(
       vertexCurvature: Array.from(vertexCurvature(mesh, angles)),
       barycentricAreas: Array.from(vertexAreas(mesh, lengths, 'barycentric')),
       mixedAreas: Array.from(vertexAreas(mesh, lengths, 'mixed')),
+      laplacian: triplets(laplacian),
+      delaunay: {
+        flips: delaunay.flips,
+        faces: faceList(delaunay.mesh),
+        faceEdgeLengths: lengthsPerFace(delaunay.mesh, delaunay.lengths),
+        laplacian: triplets(cotanLaplacian(delaunay.mesh, delaunay.lengths)),
+      },
+      // Arbitrary smooth-ish boundary data; only agreement with a direct solve matters.
+      dirichlet: dirichlet(mesh, laplacian, (v) => Math.cos(0.37 * v) + 0.01 * v),
     },
   };
   if (positions !== undefined) {
@@ -142,6 +211,7 @@ const meshes: MeshFixture[] = [
   surfaceFixture('plane-jitter-12', plane({ resolution: 12, jitter: 0.2, seed: 12 })),
   surfaceFixture('bump-16', gaussianBump({ resolution: 16, height: 0.5, width: 0.4 })),
   surfaceFixture('saddle-16', saddle({ resolution: 16, bend: 0.5 })),
+  surfaceFixture('steep-bump-16', gaussianBump({ resolution: 16, height: 1.5, width: 0.3 })),
   surfaceFixture('cap-16', sphericalCap({ resolution: 16, radius: 2 })),
   surfaceFixture('cone-6x12', cone({ deficit: 1.2345, rings: 6, sectors: 12 })),
   perturbedGrid(),

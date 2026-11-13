@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
@@ -29,6 +29,23 @@ class MeshFixture:
     vertex_curvature: NDArray[np.float64]
     barycentric_areas: NDArray[np.float64]
     mixed_areas: NDArray[np.float64]
+    laplacian: NDArray[np.float64] = field(repr=False)
+    delaunay_flips: int = 0
+    delaunay_faces: NDArray[np.int64] = field(default_factory=lambda: np.empty((0, 3), np.int64))
+    delaunay_face_edge_lengths: NDArray[np.float64] = field(
+        default_factory=lambda: np.empty((0, 3), np.float64)
+    )
+    delaunay_laplacian: NDArray[np.float64] = field(
+        default_factory=lambda: np.empty((0, 3), np.float64)
+    )
+    dirichlet_boundary_values: NDArray[np.float64] = field(
+        default_factory=lambda: np.empty(0, np.float64)
+    )
+    dirichlet_solution: NDArray[np.float64] = field(default_factory=lambda: np.empty(0, np.float64))
+
+    @property
+    def vertex_count(self) -> int:
+        return int(self.is_boundary.size)
 
     def __repr__(self) -> str:
         return self.name
@@ -71,6 +88,13 @@ def mesh_fixtures() -> list[MeshFixture]:
                 vertex_curvature=_floats(results["vertexCurvature"]),
                 barycentric_areas=_floats(results["barycentricAreas"]),
                 mixed_areas=_floats(results["mixedAreas"]),
+                laplacian=_floats(results["laplacian"]),
+                delaunay_flips=int(results["delaunay"]["flips"]),
+                delaunay_faces=np.asarray(results["delaunay"]["faces"], dtype=np.int64),
+                delaunay_face_edge_lengths=_floats(results["delaunay"]["faceEdgeLengths"]),
+                delaunay_laplacian=_floats(results["delaunay"]["laplacian"]),
+                dirichlet_boundary_values=_floats(results["dirichlet"]["boundaryValues"]),
+                dirichlet_solution=_floats(results["dirichlet"]["solution"]),
             )
         )
     return fixtures

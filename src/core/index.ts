@@ -1,3 +1,9 @@
+export {
+  DELAUNAY_TOLERANCE,
+  intrinsicDelaunay,
+  nonDelaunayEdges,
+  type IntrinsicDelaunayResult,
+} from './delaunay.ts';
 export { angleSums, gaussBonnetResidual, gaussianCurvature, vertexCurvature } from './curvature.ts';
 export {
   cornerAngles,
@@ -8,8 +14,15 @@ export {
   vertexAreas,
   type VertexAreaScheme,
 } from './geometry.ts';
+export { cornerCotangents, cotanLaplacian, cotanWeights } from './laplacian.ts';
 export { MeshError, TriangleMesh, halfedgeFace, nextHalfedge, prevHalfedge } from './mesh.ts';
 export { mulberry32 } from './random.ts';
+export {
+  conjugateGradient,
+  type ConjugateGradientOptions,
+  type ConjugateGradientResult,
+} from './solvers.ts';
+export { CsrMatrix } from './sparse.ts';
 export { compensatedSum } from './summation.ts';
 export {
   cone,

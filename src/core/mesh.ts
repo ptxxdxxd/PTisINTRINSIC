@@ -163,6 +163,96 @@ export class TriangleMesh {
     return mesh;
   }
 
+  /** An independent copy, for algorithms that change the connectivity. */
+  clone(): TriangleMesh {
+    return new TriangleMesh(
+      this.vertexCount,
+      this.halfedgeVertex.slice(),
+      this.halfedgeTwin.slice(),
+      this.halfedgeEdge.slice(),
+      this.edgeHalfedge.slice(),
+      this.vertexHalfedge.slice(),
+    );
+  }
+
+  /** The halfedge from one vertex to another, or -1 if they are not adjacent that way. */
+  findHalfedge(from: number, to: number): number {
+    for (const h of this.outgoingHalfedges(from)) {
+      if (this.tipVertex(h) === to) return h;
+    }
+    return -1;
+  }
+
+  /**
+   * Replaces interior edge e, the diagonal of the quadrilateral formed by its
+   * two faces, with the other diagonal. Only the connectivity changes; new
+   * edge lengths are the caller's business. The edge keeps its index.
+   *
+   * Returns false, changing nothing, when the edge is on the boundary or the
+   * other diagonal already exists (flipping would make two edges join the same
+   * pair of vertices).
+   *
+   * Before, with h0 = i→j in face f0 and h1 = j→i in face f1:
+   *     f0 = (i, j, k),  f1 = (j, i, l)
+   * after:
+   *     f0 = (l, j, k),  f1 = (k, i, l),  edge e = k–l.
+   */
+  flipEdge(e: number): boolean {
+    const h0 = this.edgeHalfedge[e];
+    const h1 = this.halfedgeTwin[h0];
+    if (h1 === -1) return false;
+    const vertex = this.halfedgeVertex;
+    const twin = this.halfedgeTwin;
+    const edge = this.halfedgeEdge;
+    const i = vertex[h0];
+    const j = vertex[h1];
+    const h0n = nextHalfedge(h0);
+    const h0p = prevHalfedge(h0);
+    const h1n = nextHalfedge(h1);
+    const h1p = prevHalfedge(h1);
+    const k = vertex[h0p];
+    const l = vertex[h1p];
+    // A boundary edge has only one halfedge, so look in both directions.
+    if (k === l || this.findHalfedge(k, l) !== -1 || this.findHalfedge(l, k) !== -1) return false;
+
+    const f0 = 3 * halfedgeFace(h0);
+    const f1 = 3 * halfedgeFace(h1);
+    // The four outer halfedges keep their direction, edge and twin but move to
+    // new slots: j→k, l→j in f0 and k→i, i→l in f1.
+    const outer = [
+      { from: h1p, to: f0, tail: l },
+      { from: h0n, to: f0 + 1, tail: j },
+      { from: h0p, to: f1, tail: k },
+      { from: h1n, to: f1 + 1, tail: i },
+    ].map((m) => ({ ...m, edge: edge[m.from], twin: twin[m.from] }));
+    const movedTo = new Map(outer.map((m) => [m.from, m.to]));
+
+    for (const m of outer) {
+      vertex[m.to] = m.tail;
+      edge[m.to] = m.edge;
+      twin[m.to] = m.twin;
+      if (m.twin !== -1) twin[m.twin] = m.to;
+      this.edgeHalfedge[m.edge] = m.to;
+    }
+    vertex[f0 + 2] = k;
+    vertex[f1 + 2] = l;
+    edge[f0 + 2] = e;
+    edge[f1 + 2] = e;
+    twin[f0 + 2] = f1 + 2;
+    twin[f1 + 2] = f0 + 2;
+    this.edgeHalfedge[e] = f0 + 2;
+
+    // Repoint any vertex whose stored halfedge moved or disappeared. Boundary
+    // vertices only ever store an outer (boundary) halfedge, which moved.
+    for (const v of [i, j, k, l]) {
+      const stored = this.vertexHalfedge[v];
+      const moved = movedTo.get(stored);
+      if (moved !== undefined) this.vertexHalfedge[v] = moved;
+      else if (stored === h0 || stored === h1) this.vertexHalfedge[v] = v === i ? f1 + 1 : f0 + 1;
+    }
+    return true;
+  }
+
   /** Head vertex of a halfedge. */
   tipVertex(h: number): number {
     return this.halfedgeVertex[nextHalfedge(h)];
