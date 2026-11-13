@@ -6,8 +6,10 @@
     "moduleResolution": "bundler",
     "types": ["node"],
 
+    // noUncheckedIndexedAccess is deliberately off. The numerical core is typed-array
+    // code whose indices come from the validated mesh structure; the flag would type
+    // every read as number | undefined and force an assertion on each one.
     "strict": true,
-    "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,

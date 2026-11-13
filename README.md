@@ -21,6 +21,7 @@ The differential tests recompute the same quantities with libigl, potpourri3d, s
 mpmath. Python 3.11 to 3.13:
 
 ```sh
+npm run fixtures    # writes oracle/fixtures/*.json from the TypeScript core
 python -m venv .venv && . .venv/bin/activate
 pip install -r oracle/requirements.txt
 cd oracle && ruff check . && ruff format --check . && mypy && pytest
