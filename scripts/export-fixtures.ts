@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   CsrMatrix,
+  HeatMethod,
   conjugateGradient,
   cone,
   cornerAngles,
@@ -65,6 +66,8 @@ interface MeshFixture {
     };
     /** Full spectrum of L φ = λ M φ with the barycentric lumped mass. */
     spectrum: { values: number[]; vectors: number[][] };
+    /** Heat-method distance from one vertex and from three. */
+    geodesics: { time: number; cases: { sources: number[]; distance: number[] }[] };
     /** L u = 0 inside, u = boundaryValues on the boundary, solved by conjugate gradients. */
     dirichlet: {
       boundaryValues: number[];
@@ -151,6 +154,19 @@ function dirichlet(mesh: TriangleMesh, laplacian: CsrMatrix, g: (v: number) => n
   return { boundaryValues, solution, relativeResidual: result.relativeResidual };
 }
 
+function geodesics(mesh: TriangleMesh, lengths: Float64Array) {
+  const solver = new HeatMethod(mesh, lengths);
+  const n = mesh.vertexCount;
+  const sourceSets = [[Math.floor(n / 3)], [0, n - 1, Math.floor(n / 2)]];
+  return {
+    time: solver.time,
+    cases: sourceSets.map((sources) => ({
+      sources,
+      distance: Array.from(solver.distance(sources)),
+    })),
+  };
+}
+
 function meshFixture(
   name: string,
   mesh: TriangleMesh,
@@ -192,6 +208,7 @@ function meshFixture(
         faceEdgeLengths: lengthsPerFace(delaunay.mesh, delaunay.lengths),
         laplacian: triplets(cotanLaplacian(delaunay.mesh, delaunay.lengths)),
       },
+      geodesics: geodesics(mesh, lengths),
       // Arbitrary smooth-ish boundary data; only agreement with a direct solve matters.
       dirichlet: dirichlet(mesh, laplacian, (v) => Math.cos(0.37 * v) + 0.01 * v),
     },

@@ -1,3 +1,4 @@
+export { SparseCholesky, reverseCuthillMcKee } from './cholesky.ts';
 export {
   DELAUNAY_TOLERANCE,
   intrinsicDelaunay,
@@ -14,6 +15,7 @@ export {
   vertexAreas,
   type VertexAreaScheme,
 } from './geometry.ts';
+export { HeatMethod, type HeatMethodOptions } from './geodesics.ts';
 export { cornerCotangents, cotanLaplacian, cotanWeights } from './laplacian.ts';
 export { symmetricEigen, type SymmetricEigen, type SymmetricEigenOptions } from './eigen.ts';
 export { MeshError, TriangleMesh, halfedgeFace, nextHalfedge, prevHalfedge } from './mesh.ts';

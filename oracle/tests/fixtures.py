@@ -17,6 +17,12 @@ UNIT_ROUNDOFF = 2.0**-53
 
 
 @dataclass(frozen=True)
+class GeodesicCase:
+    sources: tuple[int, ...]
+    distance: NDArray[np.float64] = field(repr=False)
+
+
+@dataclass(frozen=True)
 class MeshFixture:
     name: str
     embedded: bool
@@ -46,6 +52,8 @@ class MeshFixture:
     spectrum_vectors: NDArray[np.float64] = field(
         default_factory=lambda: np.empty((0, 0), np.float64)
     )
+    geodesic_time: float = 0.0
+    geodesic_cases: tuple[GeodesicCase, ...] = ()
 
     @property
     def vertex_count(self) -> int:
@@ -101,6 +109,14 @@ def mesh_fixtures() -> list[MeshFixture]:
                 dirichlet_solution=_floats(results["dirichlet"]["solution"]),
                 spectrum_values=_floats(results["spectrum"]["values"]),
                 spectrum_vectors=_floats(results["spectrum"]["vectors"]),
+                geodesic_time=float(results["geodesics"]["time"]),
+                geodesic_cases=tuple(
+                    GeodesicCase(
+                        sources=tuple(int(v) for v in case["sources"]),
+                        distance=_floats(case["distance"]),
+                    )
+                    for case in results["geodesics"]["cases"]
+                ),
             )
         )
     return fixtures
