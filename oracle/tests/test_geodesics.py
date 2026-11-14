@@ -5,8 +5,9 @@ Two references:
 * A direct re-implementation here with scipy's sparse LU, from libigl's
   intrinsic cotan and mass matrices and a different formula for the gradient
   (the Dirichlet form instead of a planar layout of each face).
-* potpourri3d's MeshHeatMethodDistanceSolver (geometry-central), without its
-  robust Laplacian so that it runs on the same triangulation.
+* potpourri3d's MeshHeatMethodDistanceSolver (geometry-central) with
+  use_robust=False, which turns off its intrinsic mollification and tufted
+  cover, so that it runs on the same triangulation.
 
 geometry-central solves its Poisson problem with L + 1e-6 I instead of the
 singular L (heat_method_distance.cpp). That changes the distance in the fifth
