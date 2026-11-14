@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import { toCsv, toObj, toVtk, type ExportField, type ExportMesh } from '../core/index.ts';
 import { CountingChart, DimensionChart } from './Charts.tsx';
-import { formatMilliseconds, formatNumber } from './format.ts';
+import { FIELDS, type FieldId } from './fields.ts';
+import { download, formatMilliseconds, formatNumber } from './format.ts';
 import {
   EIGENFUNCTIONS_KEPT,
   PRESETS,
@@ -320,6 +322,131 @@ export function SpectrumPanel(props: {
       )}
       <CountingChart spectrum={spectrum} />
       <DimensionChart spectrum={spectrum} />
+    </>
+  );
+}
+
+export function ColourControls(props: {
+  field: FieldId;
+  onField: (field: FieldId) => void;
+  sources: readonly number[];
+  /** Vertices of the surface on screen, or null while the first one computes. */
+  vertexCount: number | null;
+  onSource: (vertex: number) => void;
+  wireframe: boolean;
+  onWireframe: (on: boolean) => void;
+  contours: boolean;
+  onContours: (on: boolean) => void;
+  contourSpacing: number;
+}) {
+  const { field, sources, vertexCount } = props;
+  const distance = field === 'distance';
+  return (
+    <>
+      <label className="field">
+        <span className="visually-hidden">Field</span>
+        <select
+          value={field}
+          onChange={(event) => {
+            props.onField(event.target.value as FieldId);
+          }}
+        >
+          {Object.entries(FIELDS).map(([id, { label }]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="note">{FIELDS[field].note}</p>
+      {distance && (
+        <p className="note" data-testid="sources">
+          {sources.length === 0
+            ? 'Click the surface to place a source.'
+            : `From vertex ${sources.join(', ')}. Click to move the source; shift-click to add one.`}
+        </p>
+      )}
+      {distance && vertexCount !== null && (
+        <label className="field inline">
+          <span>Source vertex</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={vertexCount - 1}
+            value={sources.length === 0 ? '' : sources[sources.length - 1]}
+            onChange={(event) => {
+              const vertex = event.target.valueAsNumber;
+              if (Number.isInteger(vertex) && vertex >= 0 && vertex < vertexCount) {
+                props.onSource(vertex);
+              }
+            }}
+          />
+        </label>
+      )}
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={props.wireframe}
+          onChange={(event) => {
+            props.onWireframe(event.target.checked);
+          }}
+        />
+        Show edges
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={props.contours || distance}
+          disabled={distance}
+          onChange={(event) => {
+            props.onContours(event.target.checked);
+          }}
+        />
+        Contour lines
+        {props.contourSpacing > 0 ? ` every ${formatNumber(props.contourSpacing)}` : ''}
+      </label>
+    </>
+  );
+}
+
+export function ExportButtons(props: {
+  drawing: ExportMesh;
+  fields: readonly ExportField[];
+  title: string;
+}) {
+  const { drawing, fields, title } = props;
+  return (
+    <>
+      <div className="buttons">
+        <button
+          type="button"
+          onClick={() => {
+            download('intrinsic.vtk', toVtk(drawing, fields, title), 'text/plain');
+          }}
+        >
+          VTK
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            download('intrinsic.obj', toObj(drawing, title), 'text/plain');
+          }}
+        >
+          OBJ
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            download('intrinsic.csv', toCsv(drawing, fields), 'text/csv');
+          }}
+        >
+          CSV
+        </button>
+      </div>
+      <p className="note">
+        The mesh as drawn, with every field computed so far. VTK opens in ParaView.
+      </p>
     </>
   );
 }
