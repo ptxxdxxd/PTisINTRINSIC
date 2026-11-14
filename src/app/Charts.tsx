@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { formatNumber } from './format.ts';
 import { weylCount, type SpectrumData } from './model.ts';
 
 const WIDTH = 320;
@@ -26,8 +27,6 @@ function linear(domain: readonly [number, number], range: readonly [number, numb
 const path = (points: readonly (readonly [number, number])[]) =>
   points.map(([x, y], k) => `${k === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
 
-const tickLabel = (value: number) => String(Number(value.toPrecision(3)));
-
 function Axes(props: {
   x: Scale;
   y: Scale;
@@ -36,7 +35,7 @@ function Axes(props: {
 }) {
   const { x, y } = props;
   const bottom = HEIGHT - MARGIN.bottom;
-  const xTicks = props.xTicks ?? x.ticks.map((t) => [t, tickLabel(t)] as const);
+  const xTicks = props.xTicks ?? x.ticks.map((t) => [t, formatNumber(t)] as const);
   return (
     <g className="axes">
       <path d={`M${MARGIN.left},${MARGIN.top}V${bottom}H${WIDTH - MARGIN.right}`} />
@@ -44,7 +43,7 @@ function Axes(props: {
         <g key={t} transform={`translate(${MARGIN.left},${y(t)})`}>
           <line x2={WIDTH - MARGIN.left - MARGIN.right} className="grid" />
           <text x={-5} dy="0.32em" textAnchor="end">
-            {tickLabel(t)}
+            {formatNumber(t)}
           </text>
         </g>
       ))}
