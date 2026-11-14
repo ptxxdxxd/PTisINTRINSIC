@@ -191,8 +191,8 @@ export function Readouts({ summary }: { summary: Summary }) {
           </Row>
         </dl>
         <p className="note">
-          The two must agree to rounding on any mesh, however coarse. It is a theorem, and a test of
-          every angle computed.
+          The two agree to rounding on any mesh, however coarse: a theorem. As a check it covers the
+          mesh connectivity and each triangle&rsquo;s angle sum, not the individual angles.
         </p>
       </section>
       <section aria-labelledby="accuracy">
@@ -210,7 +210,7 @@ export function Readouts({ summary }: { summary: Summary }) {
         </dl>
         <p className="note">
           Pointwise curvature converges on regular meshes only. Add jitter and the error stops
-          shrinking with resolution, while the sum above stays exact.
+          shrinking with resolution.
         </p>
       </section>
       <section aria-labelledby="mesh">

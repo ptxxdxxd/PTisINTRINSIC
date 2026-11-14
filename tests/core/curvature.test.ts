@@ -122,7 +122,7 @@ describe('convergence to the smooth surface', () => {
     'spherical cap': (n: number) => sphericalCap({ resolution: n, radius: 2 }),
   };
 
-  // Measured orders between n = 32 and n = 64 are 1.93 to 2.01 (findings.md).
+  // Measured orders between n = 32 and n = 64 are 1.93 to 2.01 (docs/results.md has the table).
   // The threshold sits below that so a change that breaks second-order
   // convergence fails, while rounding noise does not.
   it.each(

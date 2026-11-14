@@ -17,6 +17,13 @@ export class ComputeClient {
       this.pending.delete(event.data.id);
       resolve?.(event.data);
     };
+    // A worker that fails to load or throws outside a request would otherwise
+    // leave every caller waiting forever.
+    this.worker.onerror = (event) => {
+      const message = event.message || 'the compute worker failed';
+      for (const [id, resolve] of this.pending) resolve({ id, type: 'error', message });
+      this.pending.clear();
+    };
   }
 
   private send(body: Body): Promise<ComputeResponse> {
@@ -43,10 +50,6 @@ export class ComputeClient {
     const response = await this.send({ type: 'spectrum' });
     if (response.type !== 'spectrum') throw new Error(failure(response));
     return response.spectrum;
-  }
-
-  dispose(): void {
-    this.worker.terminate();
   }
 }
 

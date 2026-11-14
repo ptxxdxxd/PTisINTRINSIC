@@ -5,14 +5,19 @@
  *    docs/results.md, which only `npm run report` writes;
  * 2. README.md states a measured-looking number (a decimal or a power of ten)
  *    anywhere else, outside code;
- * 3. a tracked file uses a term from the list below. They describe physics
- *    this project does not do, and must not creep into its claims.
+ * 3. a tracked file uses a term from the list below. An earlier version of
+ *    this project described itself in these terms without doing any of the
+ *    physics. Some are respectable numerical words; none is needed here, and
+ *    the blanket ban is cheaper than judging each use.
+ *
+ * Files are the ones git tracks; in a source archive without git, every file
+ * outside build and cache directories.
  *
  * Usage: npm run docs:check
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -73,10 +78,24 @@ for (const match of prose.matchAll(/\d+\.\d+(?:e[-+]?\d+)?|\d+e[-+]?\d+/gi)) {
   problems.push(`README.md: "${match[0]}" is a number outside the generated results section`);
 }
 
-const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
-  .split('\n')
+/** The files git tracks, or, outside a checkout (a source archive), every file not in a build or cache directory. */
+function sourceFiles(): string[] {
+  try {
+    return execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8', stdio: 'pipe' }).split(
+      '\n',
+    );
+  } catch {
+    const skipped =
+      /^(node_modules|dist|coverage|test-results|playwright-report|screenshots)$|^\.|^__pycache__$|^fixtures$/;
+    return readdirSync(root, { recursive: true, encoding: 'utf8' })
+      .map((path) => path.split(sep).join('/'))
+      .filter((path) => !path.split('/').some((part) => skipped.test(part)));
+  }
+}
+
+const tracked = sourceFiles()
   .filter((path) => /\.(ts|tsx|py|md|json|html|css|yml|toml|txt|cff)$/.test(path) && path !== SELF)
-  .filter((path) => path !== 'package-lock.json');
+  .filter((path) => path !== 'package-lock.json' && path !== 'oracle/agreement.json');
 for (const path of tracked) {
   const text = read(path).toLowerCase();
   for (const term of FORBIDDEN) {

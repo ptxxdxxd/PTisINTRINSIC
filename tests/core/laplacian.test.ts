@@ -109,3 +109,18 @@ describe('cotan Laplacian', () => {
     }
   });
 });
+
+describe('cotan weights on the boundary', () => {
+  it('are negative on a boundary edge that faces an obtuse angle', () => {
+    // Sides 1, 1 and 1.9: the long edge faces 143.6°. It is a boundary edge,
+    // so no flip can remove it, and nonDelaunayEdges (interior only) is empty.
+    const mesh = TriangleMesh.fromFaces(3, [0, 1, 2]);
+    const lengths = new Float64Array(3).fill(1);
+    const long = mesh.halfedgeEdge[mesh.findHalfedge(0, 1)];
+    lengths[long] = 1.9;
+    const weights = cotanWeights(mesh, lengths);
+    expect(weights[long]).toBeLessThan(-0.6);
+    expect(weights.filter((w) => w > 0)).toHaveLength(2);
+    expect(nonDelaunayEdges(mesh, lengths)).toEqual([]);
+  });
+});

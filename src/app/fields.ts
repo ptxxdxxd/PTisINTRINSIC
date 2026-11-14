@@ -8,6 +8,12 @@ export interface FieldInfo {
   readonly map: ColorMapName;
   /** What the numbers are, in one sentence. */
   readonly note: string;
+  /**
+   * Smallest half-range of the colour scale. Without it a field that is zero
+   * up to rounding (curvature of a flat surface) would be drawn as noise in
+   * full colour.
+   */
+  readonly floor?: number;
 }
 
 export const FIELDS: Readonly<Record<FieldId, FieldInfo>> = {
@@ -15,6 +21,7 @@ export const FIELDS: Readonly<Record<FieldId, FieldInfo>> = {
     label: 'Gaussian curvature',
     map: 'diverging',
     note: 'Angle defect divided by the vertex area. Not defined on the boundary.',
+    floor: 1e-9,
   },
   exact: {
     label: 'Exact curvature of the smooth surface',
@@ -25,11 +32,13 @@ export const FIELDS: Readonly<Record<FieldId, FieldInfo>> = {
     label: 'Curvature error (computed − exact)',
     map: 'diverging',
     note: 'How far the mesh value is from the smooth surface’s.',
+    floor: 1e-9,
   },
   angleDefect: {
     label: 'Angle defect',
     map: 'diverging',
     note: '2π minus the angles around a vertex (π on the boundary): curvature integrated over the vertex.',
+    floor: 1e-9,
   },
   area: { label: 'Vertex area', map: 'sequential', note: 'Mixed Voronoi area of each vertex.' },
   distance: {
@@ -40,12 +49,12 @@ export const FIELDS: Readonly<Record<FieldId, FieldInfo>> = {
   eigen: {
     label: 'Laplacian eigenfunction',
     map: 'diverging',
-    note: 'A vibration mode of the surface with an insulated boundary.',
+    note: 'An eigenfunction of the Laplacian with a free (Neumann) boundary.',
   },
 };
 
 /** Colour range: symmetric about zero for signed fields, min to max otherwise. */
-export function fieldRange(values: Float64Array, map: ColorMapName): [number, number] {
+export function fieldRange(values: Float64Array, map: ColorMapName, floor = 0): [number, number] {
   let low = Infinity;
   let high = -Infinity;
   for (const x of values) {
@@ -55,7 +64,7 @@ export function fieldRange(values: Float64Array, map: ColorMapName): [number, nu
   }
   if (low > high) return [0, 1];
   if (map === 'diverging') {
-    const size = Math.max(Math.abs(low), Math.abs(high)) || 1;
+    const size = Math.max(Math.abs(low), Math.abs(high), floor) || 1;
     return [-size, size];
   }
   return low === high ? [low, low + 1] : [low, high];

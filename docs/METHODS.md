@@ -28,7 +28,10 @@ They are tested against 80-digit arithmetic on thin triangles built for the purp
 `geometry.ts`, `curvature.ts`. The angle defect of an interior vertex is 2π minus the sum of the
 angles around it; on the boundary, π minus that sum. It is the Gaussian curvature integrated over
 the vertex's neighbourhood. Summed over the mesh it equals 2π times the Euler characteristic
-exactly (the discrete Gauss–Bonnet theorem), which the tests and the app both check.
+exactly (the discrete Gauss–Bonnet theorem), which the tests and the app both check. As a check
+it is weaker than it looks: it holds whenever each triangle's angles sum to π and the
+connectivity is right, whatever the individual angles are. Those are tested against libigl and
+against 80-digit arithmetic.
 
 Dividing the defect by a vertex area gives a pointwise estimate. The area used is the mixed
 Voronoi area of Meyer et al. [2]. The estimate converges to the curvature of a smooth surface
@@ -47,8 +50,10 @@ flat meshes; all three are tested. The mass matrix is diagonal (barycentric vert
 `delaunay.ts`. An edge is Delaunay when the two angles opposite it sum to at most π, which is
 when its cotan weight is non-negative. Flipping every edge that is not Delaunay ends with the
 intrinsic Delaunay triangulation [5, 6]. The new edge's length comes from unfolding its two
-faces into the plane. The cotan Laplacian of the result has no negative weights and does not
-depend on the order of the flips [5], which is how it is compared with libigl's.
+faces into the plane. Every interior edge of the result has a non-negative weight, and the
+Laplacian does not depend on the order of the flips [5], which is how it is compared with
+libigl's. A boundary edge cannot be flipped and keeps a negative weight if the angle facing it
+is obtuse.
 
 The flips change which triangles cover the surface, never the surface. The tests check that
 every vertex keeps its angle defect and the total area is unchanged.
@@ -86,10 +91,15 @@ count of the square's eigenvalues.
 gradient in every face, and solve a Poisson problem for the function with that gradient. All
 three steps need only edge lengths. Both matrices are factored once.
 
-Three departures from the plain algorithm, each with a test:
+The result is the distance smoothed over about one edge length. Measured against exact
+distances, the error falls at second order only when the source sits on an axis of symmetry
+(a cone's apex, a sphere's pole); from a general vertex it falls at first order or slower.
+
+Departures from the plain algorithm, each with a test:
 
 - If the heat falls below the smallest normal double anywhere, the call fails and says to use a
-  longer time step. The alternative is a distance that silently stops growing.
+  longer time step. The alternative is a distance that silently stops growing. If the step is
+  so long that the heat is constant to rounding over most of the mesh, the call fails too.
 - A face in which the heat is constant to rounding error is skipped. Normalizing its gradient
   would turn rounding noise into a unit vector. This happens whenever symmetry makes all three
   corners of a face equally far from the source.

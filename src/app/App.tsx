@@ -133,7 +133,10 @@ export function App() {
     if (field === 'eigen') return spectrumData?.vectors[mode] ?? missing();
     return built.fields[field];
   }, [built, field, distanceValues, spectrumData, mode]);
-  const range = useMemo(() => fieldRange(values, info.map), [values, info.map]);
+  const range = useMemo(
+    () => fieldRange(values, info.map, info.floor),
+    [values, info.map, info.floor],
+  );
   const spacing = contours || field === 'distance' ? contourStep(range) : 0;
 
   const exportFields = (target: Built): ExportField[] => {
@@ -150,7 +153,9 @@ export function App() {
     }
     return list;
   };
-  const title = `Intrinsic: ${PRESETS[job.spec.kind].label}, ${built?.summary.vertices ?? 0} vertices`;
+  // Named after the surface that was built, which lags the controls while a new one computes.
+  const shown = result?.job.spec.kind ?? job.spec.kind;
+  const title = `Intrinsic: ${PRESETS[shown].label}, ${built?.summary.vertices ?? 0} vertices`;
 
   return (
     <div className="app">
@@ -175,7 +180,8 @@ export function App() {
               sources={field === 'distance' ? sources : []}
               selected={selected}
               onPick={pickVertex}
-              description={`${PRESETS[job.spec.kind].label} coloured by ${info.label.toLowerCase()}`}
+              viewKey={shown}
+              description={`${PRESETS[shown].label} coloured by ${info.label.toLowerCase()}. Click a vertex to inspect it.`}
             />
           </Suspense>
         )}
@@ -355,9 +361,9 @@ export function App() {
         <section aria-labelledby="about">
           <h2 id="about">What this is</h2>
           <p className="note">
-            Every number here is computed in your browser from the edge lengths of the mesh. Each
-            method is tested against a closed-form answer and against libigl, geometry-central,
-            SciPy and mpmath; the repository has the tests and the measured accuracy.
+            Every number here is computed in your browser from the edge lengths of the mesh. The
+            methods are tested against closed-form answers and against libigl, geometry-central,
+            SciPy and mpmath; the repository says which is checked against what, and how closely.
           </p>
         </section>
       </aside>

@@ -16,6 +16,11 @@ export interface ConjugateGradientResult {
   /** ||b − A x|| / ||b||, recomputed from scratch at the end. */
   readonly relativeResidual: number;
   readonly converged: boolean;
+  /**
+   * True when the iteration met a direction p with pᵀ A p <= 0 and stopped:
+   * A is not positive definite on the space searched. x is the last iterate.
+   */
+  readonly breakdown: boolean;
 }
 
 /**
@@ -49,7 +54,13 @@ export function conjugateGradient(
   const x = options.initialGuess ? Float64Array.from(options.initialGuess) : new Float64Array(n);
   const bNorm = Math.sqrt(dot(b, b));
   if (bNorm === 0) {
-    return { x: new Float64Array(n), iterations: 0, relativeResidual: 0, converged: true };
+    return {
+      x: new Float64Array(n),
+      iterations: 0,
+      relativeResidual: 0,
+      converged: true,
+      breakdown: false,
+    };
   }
   const r = a.multiply(x);
   for (let i = 0; i < n; i++) r[i] = b[i] - r[i];
@@ -60,9 +71,15 @@ export function conjugateGradient(
   let rz = dot(r, z);
 
   let iterations = 0;
+  let breakdown = false;
   while (Math.sqrt(dot(r, r)) > tolerance * bNorm && iterations < maxIterations) {
     a.multiply(p, ap);
-    const alpha = rz / dot(p, ap);
+    const curvature = dot(p, ap);
+    if (!(curvature > 0)) {
+      breakdown = true;
+      break;
+    }
+    const alpha = rz / curvature;
     for (let i = 0; i < n; i++) {
       x[i] += alpha * p[i];
       r[i] -= alpha * ap[i];
@@ -79,7 +96,7 @@ export function conjugateGradient(
   const trueResidual = a.multiply(x);
   for (let i = 0; i < n; i++) trueResidual[i] = b[i] - trueResidual[i];
   const relativeResidual = Math.sqrt(dot(trueResidual, trueResidual)) / bNorm;
-  return { x, iterations, relativeResidual, converged: relativeResidual <= tolerance };
+  return { x, iterations, relativeResidual, converged: relativeResidual <= tolerance, breakdown };
 }
 
 function dot(u: Float64Array, v: Float64Array): number {

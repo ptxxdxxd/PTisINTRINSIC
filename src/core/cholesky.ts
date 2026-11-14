@@ -132,6 +132,20 @@ export class SparseCholesky {
     const position = new Int32Array(n);
     for (let k = 0; k < n; k++) position[order[k]] = k;
 
+    // Only one triangle is used below, so the other must be checked to match.
+    for (let i = 0; i < n; i++) {
+      for (let p = a.rowStart[i]; p < a.rowStart[i + 1]; p++) {
+        const j = a.columnIndex[p];
+        if (j === i) continue;
+        const value = a.values[p];
+        const mirror = a.get(j, i);
+        const scale = Math.max(Math.abs(value), Math.abs(mirror));
+        if (!(Math.abs(value - mirror) <= SYMMETRY_TOLERANCE * scale)) {
+          throw new RangeError(`matrix is not symmetric at (${i}, ${j})`);
+        }
+      }
+    }
+
     const first = new Int32Array(n);
     for (let k = 0; k < n; k++) {
       const i = order[k];
@@ -150,15 +164,7 @@ export class SparseCholesky {
         const j = a.columnIndex[p];
         const value = a.values[p];
         const m = position[j];
-        if (m <= k) {
-          values[rowStart[k] + m - first[k]] = value;
-        } else {
-          const mirror = a.get(j, i);
-          const scale = Math.max(Math.abs(value), Math.abs(mirror));
-          if (!(Math.abs(value - mirror) <= SYMMETRY_TOLERANCE * scale)) {
-            throw new RangeError(`matrix is not symmetric at (${i}, ${j})`);
-          }
-        }
+        if (m <= k) values[rowStart[k] + m - first[k]] = value;
       }
     }
 

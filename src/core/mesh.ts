@@ -191,8 +191,8 @@ export class TriangleMesh {
    * The result need not be a simplicial complex: two edges may join the same
    * pair of vertices, an edge may be a loop, and a face may use one vertex
    * twice. That is a Δ-complex, and the intrinsic Delaunay triangulation of
-   * some meshes is only reachable through one (Fisher et al. 2007; libigl's
-   * intrinsic_delaunay_triangulation documents the same). Such meshes cannot
+   * some meshes is only reachable through one (Bobenko and Springborn 2007;
+   * Sharp, Soliman and Crane 2019). Such meshes cannot
    * be rebuilt with fromFaces; use validateConnectivity to check them.
    *
    * Returns false, changing nothing, when the edge is on the boundary or both

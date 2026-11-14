@@ -10,8 +10,8 @@
  *   3. the function whose gradient is closest to X: L φ = −∇·X.
  *
  * L is the cotan stiffness matrix and M the lumped (barycentric) mass matrix.
- * Both systems are factored once, so each new source set costs two triangular
- * solves. The boundary is insulated (Neumann conditions).
+ * Both systems are factored once, so each new source set costs two solves, a
+ * forward and a back substitution each. The boundary is insulated (Neumann conditions).
  *
  * The result is an approximation that smooths the true distance over a length
  * of about √t; the default t is the squared mean edge length. Accuracy needs a
@@ -22,7 +22,7 @@
  * Computing Distance Based on Heat Flow", ACM Trans. Graph. 32(5), 2013.
  */
 import { SparseCholesky } from './cholesky.ts';
-import { faceAreas, faceEdgeLengths, vertexAreas } from './geometry.ts';
+import { faceAreas, faceEdgeLengths, validateEdgeLengths, vertexAreas } from './geometry.ts';
 import { cornerCotangents, cotanLaplacian } from './laplacian.ts';
 import { MeshError, type TriangleMesh } from './mesh.ts';
 import { CsrMatrix } from './sparse.ts';
@@ -42,7 +42,9 @@ export interface HeatMethodOptions {
   /**
    * The heat step is t = timeCoefficient · (mean edge length)². Default 1.
    * Larger values smooth the result more; they are needed on meshes more than
-   * about 700 edges across, where the heat otherwise underflows.
+   * several hundred edges across, where the heat otherwise underflows (the
+   * call then throws). Very large values make the heat constant to rounding,
+   * which also throws.
    */
   readonly timeCoefficient?: number;
 }
@@ -63,6 +65,7 @@ export class HeatMethod {
     if (!(coefficient > 0) || !Number.isFinite(coefficient)) {
       throw new RangeError(`timeCoefficient must be positive and finite, got ${coefficient}`);
     }
+    validateEdgeLengths(mesh, lengths);
     requireConnected(mesh);
     const n = mesh.vertexCount;
     const meanLength = compensatedSum(lengths) / mesh.edgeCount;
@@ -153,6 +156,7 @@ export class HeatMethod {
   private divergence(u: Float64Array): Float64Array {
     const { mesh, cotangent, layout } = this;
     const result = new Float64Array(mesh.vertexCount);
+    let flat = 0;
     for (let f = 0; f < mesh.faceCount; f++) {
       const v0 = mesh.halfedgeVertex[3 * f];
       const v1 = mesh.halfedgeVertex[3 * f + 1];
@@ -167,7 +171,10 @@ export class HeatMethod {
       // differences are noise and normalizing them would turn that noise into
       // a unit vector. Such a face has no direction and contributes nothing.
       const size = Math.max(Math.abs(u[v0]), Math.abs(u[v1]), Math.abs(u[v2]));
-      if (scale <= FLAT_FACE_TOLERANCE * size) continue;
+      if (scale <= FLAT_FACE_TOLERANCE * size) {
+        flat++;
+        continue;
+      }
       d1 /= scale;
       d2 /= scale;
       // u is linear on the face, so e · ∇u is the difference of u along e.
@@ -182,6 +189,13 @@ export class HeatMethod {
       result[v0] += c2 * d1 + c1 * d2;
       result[v1] += -c2 * d1 + c0 * (d2 - d1);
       result[v2] += -c1 * d2 + c0 * (d1 - d2);
+    }
+    // A few flat faces are symmetry. Most of the mesh flat means the heat step
+    // was so long that the heat evened out, and there is no gradient to read.
+    if (2 * flat > mesh.faceCount) {
+      throw new RangeError(
+        `the heat is constant to rounding on ${flat} of ${mesh.faceCount} faces; use a smaller timeCoefficient`,
+      );
     }
     return result;
   }

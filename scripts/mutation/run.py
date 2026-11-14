@@ -2,10 +2,12 @@
 """Mutation check: break the code on purpose and confirm a test notices.
 
 Each entry of mutants.json replaces one piece of source text with a plausible
-bug. The repository is copied to a temporary directory first, so the working
-tree is never touched. A mutant is "caught" when the unit tests fail (or, for
-entries marked "check": "oracle", when the Python differential tests fail on
-fixtures exported from the mutated code).
+bug. The list is curated by hand: it covers the places where a slip is easy
+and silent, and it is not a mutation score over every line. The repository is
+copied to a temporary directory first, so the working tree is never touched.
+A mutant is "caught" when the unit tests fail (or, for entries marked
+"check": "oracle", when the Python differential tests fail on fixtures
+exported from the mutated code).
 
 Entries with an "equivalent" reason are expected to survive: the change cannot
 alter behaviour, and the reason says why. Any other survivor, and any entry
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -28,7 +31,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SKIP = shutil.ignore_patterns(
-    "node_modules", "dist", "coverage", ".git", "test-results", "playwright-report", "screenshots"
+    "node_modules",
+    "dist",
+    "coverage",
+    ".git",
+    "test-results",
+    "playwright-report",
+    "screenshots",
+    ".venv",
+    "fixtures",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
 )
 
 
@@ -43,6 +58,10 @@ def main() -> int:
     parser.add_argument("--python", help="interpreter with oracle/requirements.txt installed")
     parser.add_argument("--only", help="run only mutants whose label contains this text")
     arguments = parser.parse_args()
+    # Commands run inside the copy, so a relative interpreter path would be
+    # looked up there. abspath, not resolve(): resolving the symlink would
+    # leave the virtual environment.
+    python = os.path.abspath(arguments.python) if arguments.python else None
     mutants = json.loads((Path(__file__).parent / "mutants.json").read_text(encoding="utf-8"))
     if arguments.only:
         mutants = [m for m in mutants if arguments.only in m["label"]]
@@ -67,12 +86,13 @@ def main() -> int:
             target.write_text(original.replace(mutant["find"], mutant["replace"]), encoding="utf-8")
             try:
                 if mutant.get("check") == "oracle":
-                    if not arguments.python:
+                    if python is None:
                         print(f"SKIPPED   {label}: needs --python")
                         skipped += 1
                         continue
-                    run(["node", "scripts/export-fixtures.ts"], copy)
-                    passed = run([arguments.python, "-m", "pytest", "-q", "-x"], copy / "oracle")
+                    # A mutant that breaks the export itself is caught too.
+                    exported = run(["node", "scripts/export-fixtures.ts"], copy)
+                    passed = exported and run([python, "-m", "pytest", "-q", "-x"], copy / "oracle")
                 else:
                     passed = run(["npx", "vitest", "run", "--bail", "1"], copy)
             finally:

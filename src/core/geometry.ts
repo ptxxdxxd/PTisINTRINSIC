@@ -27,8 +27,16 @@ export function edgeLengthsFromPositions(
 }
 
 /**
+ * Edge lengths accepted by validateEdgeLengths. The area and angle formulas
+ * multiply four lengths, which under- or overflows a double beyond this range.
+ */
+export const SMALLEST_EDGE_LENGTH = 1e-75;
+export const LARGEST_EDGE_LENGTH = 1e75;
+
+/**
  * Checks that the lengths describe a valid piecewise-flat metric: one positive
- * finite length per edge and a strictly positive area in every face.
+ * length per edge, within the range above, and a strictly positive area in
+ * every face.
  *
  * @throws RangeError naming the first offending edge or face.
  */
@@ -40,6 +48,11 @@ export function validateEdgeLengths(mesh: TriangleMesh, lengths: Float64Array): 
     const l = lengths[e];
     if (!(l > 0) || !Number.isFinite(l)) {
       throw new RangeError(`edge ${e} has invalid length ${l}`);
+    }
+    if (l < SMALLEST_EDGE_LENGTH || l > LARGEST_EDGE_LENGTH) {
+      throw new RangeError(
+        `edge ${e} has length ${l}, outside ${SMALLEST_EDGE_LENGTH} to ${LARGEST_EDGE_LENGTH}; rescale the mesh`,
+      );
     }
   }
   for (let f = 0; f < mesh.faceCount; f++) {

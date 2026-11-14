@@ -7,6 +7,8 @@ export {
 } from './delaunay.ts';
 export { angleSums, gaussBonnetResidual, gaussianCurvature, vertexCurvature } from './curvature.ts';
 export {
+  LARGEST_EDGE_LENGTH,
+  SMALLEST_EDGE_LENGTH,
   cornerAngles,
   edgeLengthsFromPositions,
   faceAreas,

@@ -6,11 +6,17 @@ import {
   PRESETS,
   Session,
   coneSectors,
+  createSurface,
   weylCount,
   type SurfaceKind,
 } from '../../src/app/model.ts';
 import { ComputeService } from '../../src/app/protocol.ts';
-import { squareNeumannHeatTrace } from '../../src/core/index.ts';
+import {
+  cotanLaplacian,
+  laplacianSpectrum,
+  squareNeumannHeatTrace,
+  vertexAreas,
+} from '../../src/core/index.ts';
 
 const kinds = Object.keys(PRESETS) as SurfaceKind[];
 const small = (kind: SurfaceKind) => {
@@ -45,6 +51,25 @@ describe('Session', () => {
       expect(drawing.lengthsMatchPositions).toBe(kind !== 'cone');
     },
   );
+
+  it('divides by the mixed Voronoi area and weighs the spectrum with barycentric mass', () => {
+    // Both choices are stated in docs/METHODS.md; either swapped for the other
+    // changes every number a little and breaks nothing else.
+    const spec = small('bump');
+    const surface = createSurface(spec);
+    const session = new Session(spec, 'input');
+    const mixed = vertexAreas(surface.mesh, surface.lengths, 'mixed');
+    const barycentric = vertexAreas(surface.mesh, surface.lengths, 'barycentric');
+    expect(Array.from(session.fields.area)).toEqual(Array.from(mixed));
+    expect(Array.from(mixed)).not.toEqual(Array.from(barycentric));
+    const reference = laplacianSpectrum(cotanLaplacian(surface.mesh, surface.lengths), barycentric);
+    expect(Array.from(session.spectrum().values)).toEqual(Array.from(reference.values));
+  });
+
+  it('keeps rounding noise out of the colour scale', () => {
+    const flat = new Session(PRESETS.plane.spec, 'input').fields.gaussian;
+    expect(fieldRange(flat, 'diverging', FIELDS.gaussian.floor)).toEqual([-1e-9, 1e-9]);
+  });
 
   it('reports the flat square as flat and the cone as flat away from its apex', () => {
     const flat = new Session(PRESETS.plane.spec, 'input').summary;

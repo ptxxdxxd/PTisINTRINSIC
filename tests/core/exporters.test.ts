@@ -82,6 +82,11 @@ describe('export validation', () => {
       );
     }
     expect(() => toCsv(mesh, [{ name: 'short', values: [1] }])).toThrow(/has 1 values, need 4/);
+    // NaN means "undefined" and is written; infinity has no representation.
+    const infinite = [{ name: 'd', values: [0, Infinity, 0, 0] }];
+    expect(() => toVtk(mesh, infinite, 't')).toThrow(/contains Infinity/);
+    expect(() => toCsv(mesh, infinite)).toThrow(/contains Infinity/);
+    expect(toVtk(mesh, [], '  ').split('\n')[1]).toBe('Intrinsic mesh');
     const zeros = [0, 0, 0, 0];
     expect(() => toCsv(mesh, [{ name: ' ', values: zeros }])).toThrow(/empty or used twice/);
     expect(() =>

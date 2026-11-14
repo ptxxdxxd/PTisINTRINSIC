@@ -17,6 +17,8 @@ export interface ViewportProps {
   readonly selected: number | null;
   readonly onPick: (vertex: number, add: boolean) => void;
   readonly description: string;
+  /** The camera is re-aimed when this changes, and otherwise left where the user put it. */
+  readonly viewKey: string;
 }
 
 const VERTEX_SHADER = /* glsl */ `
@@ -79,6 +81,8 @@ interface Stage {
   /** Camera distance at which the surface's bounding sphere just fits the canvas. */
   fit: number;
   frames: number;
+  /** Handle of the animation frame waiting to draw, or 0. */
+  pendingFrame: number;
   render: () => void;
 }
 
@@ -137,15 +141,14 @@ function createStage(canvas: HTMLCanvasElement): Stage {
     radius: 1,
     fit: 1,
     frames: 0,
+    pendingFrame: 0,
     render: () => undefined,
   };
   // Draw only when something changed, at most once per animation frame.
-  let scheduled = false;
   stage.render = () => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
+    if (stage.pendingFrame !== 0) return;
+    stage.pendingFrame = requestAnimationFrame(() => {
+      stage.pendingFrame = 0;
       renderer.render(scene, camera);
       stage.frames++;
       canvas.dataset.frames = String(stage.frames);
@@ -163,6 +166,7 @@ function fitDistance(camera: THREE.PerspectiveCamera, radius: number): number {
 }
 
 function disposeStage(stage: Stage): void {
+  cancelAnimationFrame(stage.pendingFrame);
   stage.controls.dispose();
   stage.surface.geometry.dispose();
   stage.wires.geometry.dispose();
@@ -185,8 +189,10 @@ function clearMarkers(stage: Stage): void {
 export function Viewport(props: ViewportProps) {
   const { drawing, values, map, range, contourSpacing, wireframe, sources, selected, onPick } =
     props;
+  const { viewKey } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<Stage | null>(null);
+  const framed = useRef<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const pick = useRef(onPick);
   useEffect(() => {
@@ -291,6 +297,10 @@ export function Viewport(props: ViewportProps) {
     stage.wires.geometry.dispose();
     stage.wires.geometry = wires;
 
+    stage.render();
+    // Changing a slider keeps the view; a different kind of surface re-aims it.
+    if (framed.current === viewKey) return;
+    framed.current = viewKey;
     const sphere = geometry.boundingSphere ?? new THREE.Sphere(new THREE.Vector3(), 1);
     stage.radius = sphere.radius;
     stage.fit = fitDistance(stage.camera, sphere.radius);
@@ -303,7 +313,7 @@ export function Viewport(props: ViewportProps) {
     stage.camera.updateProjectionMatrix();
     stage.controls.update();
     stage.render();
-  }, [drawing]);
+  }, [drawing, viewKey]);
 
   // New field: refill the per-vertex attributes and the shader's settings.
   useEffect(() => {

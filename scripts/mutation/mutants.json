@@ -27,8 +27,7 @@
     "file": "src/core/delaunay.ts",
     "find": "edgeWeight(mesh, lengths, e) >= -DELAUNAY_TOLERANCE) continue;",
     "replace": "edgeWeight(mesh, lengths, e) >= DELAUNAY_TOLERANCE) continue;",
-    "label": "loop also flips edges of weight ~0",
-    "equivalent": "behaves identically in every case"
+    "label": "loop also flips edges of weight ~0"
   },
   {
     "file": "src/core/solvers.ts",
@@ -113,7 +112,7 @@
     "find": "  if (x >= 1) {",
     "replace": "  if (x >= 0.01) {",
     "label": "series switch point",
-    "equivalent": "both series are exact"
+    "equivalent": "both branches evaluate the same function and differ only in rounding, far below every tolerance"
   },
   {
     "file": "src/core/mesh.ts",
@@ -186,7 +185,7 @@
     "find": "    if (!mesh.flipEdge(e)) throw new Error(`non-Delaunay edge ${e} could not be flipped`);",
     "replace": "    if (!mesh.flipEdge(e)) continue;",
     "label": "delaunay: unflippable edge skipped",
-    "equivalent": "unreachable"
+    "equivalent": "the branch is unreachable: an edge with both halfedges in one face is always Delaunay (see the comment at the throw)"
   },
   {
     "file": "src/core/cholesky.ts",
@@ -281,8 +280,8 @@
   },
   {
     "file": "src/core/geodesics.ts",
-    "find": "if (scale <= FLAT_FACE_TOLERANCE * size) continue;",
-    "replace": "if (scale === 0) continue;",
+    "find": "      if (scale <= FLAT_FACE_TOLERANCE * size) {",
+    "replace": "      if (scale === 0) {",
     "label": "heat: flat-face cutoff only at exact zero"
   },
   {
@@ -314,5 +313,65 @@
     "find": "if (components !== 1) {",
     "replace": "if (components < 1) {",
     "label": "heat: disconnected meshes accepted"
+  },
+  {
+    "file": "src/core/triangle.ts",
+    "find": "return 0.25 * Math.sqrt((x + (y + z)) * zMinusXMinusY * (z + (x - y)) * (x + (y - z)));",
+    "replace": "return 0.25 * Math.sqrt((x + y + z) * (z - x + y) * (z + x - y) * (x + y - z));",
+    "label": "triangle: Kahan's parentheses dropped (plain Heron product)"
+  },
+  {
+    "file": "src/core/curvature.ts",
+    "find": "(mesh.isBoundaryVertex(v) ? Math.PI : 2 * Math.PI) - sums[v];",
+    "replace": "2 * Math.PI - sums[v];",
+    "label": "curvature: boundary vertices treated as interior"
+  },
+  {
+    "file": "src/core/exporters.ts",
+    "find": "`f ${mesh.faces[3 * f] + 1} ${mesh.faces[3 * f + 1] + 1} ${mesh.faces[3 * f + 2] + 1}`,",
+    "replace": "`f ${mesh.faces[3 * f]} ${mesh.faces[3 * f + 1]} ${mesh.faces[3 * f + 2]}`,",
+    "label": "exporters: OBJ faces written 0-based"
+  },
+  {
+    "file": "src/core/solvers.ts",
+    "find": "    if (!(curvature > 0)) {",
+    "replace": "    if (Number.isNaN(curvature)) {",
+    "label": "solver: no stop on a direction of non-positive curvature"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "    if (2 * flat > mesh.faceCount) {",
+    "replace": "    if (flat > mesh.faceCount) {",
+    "label": "heat: evened-out heat not reported"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "    validateEdgeLengths(mesh, lengths);\n",
+    "replace": "",
+    "label": "heat: edge lengths not validated"
+  },
+  {
+    "file": "src/core/geometry.ts",
+    "find": "    if (l < SMALLEST_EDGE_LENGTH || l > LARGEST_EDGE_LENGTH) {",
+    "replace": "    if (l > LARGEST_EDGE_LENGTH) {",
+    "label": "geometry: tiny edge lengths accepted"
+  },
+  {
+    "file": "src/app/model.ts",
+    "find": "    const area = vertexAreas(mesh, lengths, 'mixed');",
+    "replace": "    const area = vertexAreas(mesh, lengths, 'barycentric');",
+    "label": "app: curvature divided by barycentric instead of mixed area"
+  },
+  {
+    "file": "src/app/model.ts",
+    "find": "      vertexAreas(mesh, lengths, 'barycentric'),",
+    "replace": "      vertexAreas(mesh, lengths, 'mixed'),",
+    "label": "app: spectrum with mixed instead of barycentric mass"
+  },
+  {
+    "file": "src/app/fields.ts",
+    "find": "    const size = Math.max(Math.abs(low), Math.abs(high), floor) || 1;",
+    "replace": "    const size = Math.max(Math.abs(low), Math.abs(high)) || 1;",
+    "label": "app: rounding noise drawn in full colour"
   }
 ]

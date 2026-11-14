@@ -35,7 +35,11 @@ export function cornerCotangents(mesh: TriangleMesh, lengths: Float64Array): Flo
   return cot;
 }
 
-/** Cotan weight of every edge. Negative weights occur exactly on non-Delaunay edges. */
+/**
+ * Cotan weight of every edge. An interior edge has a negative weight exactly
+ * when it is not Delaunay; a boundary edge, when the one angle facing it is
+ * obtuse.
+ */
 export function cotanWeights(mesh: TriangleMesh, lengths: Float64Array): Float64Array {
   const cot = cornerCotangents(mesh, lengths);
   const weights = new Float64Array(mesh.edgeCount);

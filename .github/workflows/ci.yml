@@ -72,6 +72,8 @@ jobs:
           cache-dependency-path: oracle/requirements.txt
       - run: pip install -r requirements.txt
       - run: ruff check .
+      - name: Lint the mutation runner with the same rules
+        run: ruff check ../scripts --config pyproject.toml
       - run: ruff format --check .
       - run: mypy
       - run: pytest

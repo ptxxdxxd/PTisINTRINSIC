@@ -81,8 +81,9 @@ export function CountingChart({ spectrum }: { spectrum: SpectrumData }) {
       </svg>
       <figcaption>
         Eigenvalues below λ, for the first {shown} of {spectrum.values.length}. Dashed: Weyl&rsquo;s
-        law (Aλ + P√λ) / 4π with this surface&rsquo;s area and boundary length. The mesh follows it
-        until its eigenfunctions wiggle on the scale of an edge.
+        law (Aλ + P√λ) / 4π with this surface&rsquo;s area and boundary length. The law is
+        asymptotic, and the mesh runs ahead of it as its eigenfunctions approach the scale of an
+        edge.
       </figcaption>
     </figure>
   );
@@ -107,9 +108,11 @@ export function DimensionChart({ spectrum }: { spectrum: SpectrumData }) {
       </svg>
       <figcaption>
         Spectral dimension −2 d ln Z / d ln t of the heat trace Z(t) = Σ exp(−λt), from the computed
-        eigenvalues and nothing else. It is near 2 only in a middle range: at small t the mesh
-        departs from the continuum, at large t the surface&rsquo;s finite size takes over.
-        {exactDimension !== null && ' Dashed: the exact curve for the continuous square.'}
+        eigenvalues and nothing else. A smooth surface would approach 2 as t → 0. The mesh
+        overshoots near t equal to the squared edge length, a discretization effect, and at large t
+        the surface&rsquo;s finite size takes over.
+        {exactDimension !== null &&
+          ' Dashed: the exact curve for the continuous square, which stays below 2 here because of its boundary.'}
       </figcaption>
     </figure>
   );

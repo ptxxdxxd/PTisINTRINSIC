@@ -22,5 +22,8 @@ export function download(filename: string, text: string, mime: string): void {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  // After the click has been handled, not during it.
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 0);
 }

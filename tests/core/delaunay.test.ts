@@ -243,6 +243,26 @@ describe('intrinsicDelaunay', () => {
     expect(loops.length).toBeGreaterThan(0);
   });
 
+  it('leaves a cocircular edge alone even next to a real flip', () => {
+    // Vertices 0..3 are a square with corner 0 pulled outwards, so diagonal
+    // 0–2 must flip to 1–3. Vertex 4 lies on the circle through 1, 2, 3, so
+    // after that flip edge 1–2 has weight 0 within rounding: Delaunay either
+    // way, and the tolerance says leave it.
+    const positions = Float64Array.of(
+      ...[-0.1, -0.1, 0],
+      ...[1, 0, 0],
+      ...[1, 1, 0],
+      ...[0, 1, 0],
+      ...[0.5 + Math.SQRT1_2, 0.5, 0],
+    );
+    const mesh = TriangleMesh.fromFaces(5, [0, 1, 2, 0, 2, 3, 1, 4, 2]);
+    const result = intrinsicDelaunay(mesh, edgeLengthsFromPositions(mesh, positions));
+    expect(result.flips).toBe(1);
+    expect(result.mesh.findHalfedge(1, 2)).not.toBe(-1);
+    expect(result.mesh.findHalfedge(1, 3) + result.mesh.findHalfedge(3, 1)).toBeGreaterThan(-2);
+    expect(nonDelaunayEdges(result.mesh, result.lengths)).toEqual([]);
+  });
+
   it('stops with an error instead of looping forever', () => {
     const s = saddle({ resolution: 12, bend: 2 });
     expect(() => intrinsicDelaunay(s.mesh, s.lengths, { maxFlips: 3 })).toThrow(

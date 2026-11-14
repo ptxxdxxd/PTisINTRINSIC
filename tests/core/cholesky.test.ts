@@ -201,6 +201,30 @@ describe('SparseCholesky', () => {
     expect(u[n - 1]).toBeLessThan(1e-30);
   });
 
+  it('rejects a matrix with one off-diagonal entry changed, wherever the ordering puts it', () => {
+    // Only one triangle is factored, so an unchecked asymmetry would be
+    // solved as a different, symmetric system without any error.
+    fc.assert(
+      fc.property(positiveDefinite, fc.nat(), fc.boolean(), (a, pick, remove) => {
+        // A stored zero is the same matrix with or without it, and −0.5 is the
+        // one value the change below maps to itself.
+        const entries = Array.from(a.entries()).filter(
+          ([i, j, x]) => i !== j && x !== 0 && x !== -0.5,
+        );
+        fc.pre(entries.length > 0);
+        const [row, col] = entries[pick % entries.length];
+        const changed = Array.from(a.entries())
+          .filter(([i, j]) => !(remove && i === row && j === col))
+          .map(([i, j, x]): [number, number, number] => [
+            i,
+            j,
+            !remove && i === row && j === col ? x * 1.5 + 0.25 : x,
+          ]);
+        expect(() => SparseCholesky.factor(matrix(a.rows, changed))).toThrow(/not symmetric/);
+      }),
+    );
+  });
+
   it('rejects matrices that are not square, symmetric and positive definite', () => {
     expect(() => SparseCholesky.factor(CsrMatrix.fromTriplets(2, 3, [0], [0], [1]))).toThrow(
       /square/,

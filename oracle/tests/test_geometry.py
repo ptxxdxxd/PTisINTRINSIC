@@ -1,8 +1,9 @@
 """Intrinsic's areas, angles and curvature against libigl and mpmath.
 
-Tolerances are a little above the agreement measured on 2026-11-12 and recorded
-in the plan's findings: edge lengths 5.6e-17, face areas 7e-18, corner angles
-6.7e-16, interior angle defects 2.1e-15, vertex areas 4.6e-16 relative.
+Tolerances are a little above the agreement measured on 2026-11-12: edge
+lengths 5.6e-17, face areas 7e-18, corner angles 6.7e-16, interior angle
+defects 2.1e-15, vertex areas 4.6e-16 relative. docs/results.md has current
+figures.
 """
 
 from __future__ import annotations

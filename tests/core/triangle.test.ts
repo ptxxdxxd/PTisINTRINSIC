@@ -144,3 +144,40 @@ function validTriangle(): fc.Arbitrary<[number, number, number]> {
       .filter(([a, b, c]) => c > 0 && c - Math.abs(a - b) >= 0 && a + b - c >= 0)
   );
 }
+
+describe('thin triangles', () => {
+  // Reference values from 60-digit arithmetic (mpmath) on these exact doubles:
+  // sides, area, and the angle opposite the last side. The Python suite checks
+  // 185 such triangles; these three keep the property under `npm test`.
+  const NEEDLES = [
+    [1, 1, 1e-9, 5e-10, 1e-9],
+    [100000, 99999.99979, 0.00029, 10.000000077021038, 2.0000000196042075e-9],
+    [1, 0.75, 0.2500000001, 3.061862305429447e-6, 8.16496614790258e-6],
+  ] as const;
+  const ROUNDOFF = 2 ** -53;
+
+  it('keeps area and angle within four units of roundoff', () => {
+    for (const [a, b, c, area, angle] of NEEDLES) {
+      expect(Math.abs(triangleArea(a, b, c) - area)).toBeLessThanOrEqual(4 * ROUNDOFF * area);
+      expect(Math.abs(triangleAngle(c, a, b) - angle)).toBeLessThanOrEqual(4 * ROUNDOFF * angle);
+    }
+  });
+
+  it('is where the textbook Heron formula fails', () => {
+    const heron = (a: number, b: number, c: number) => {
+      const s = (a + b + c) / 2;
+      return Math.sqrt(s * (s - a) * (s - b) * (s - c));
+    };
+    const [a, b, c, area] = NEEDLES[1];
+    // Measured: off by 2.7e-8, eight orders of magnitude above roundoff.
+    expect(Math.abs(heron(a, b, c) - area) / area).toBeGreaterThan(1e-8);
+  });
+
+  it('rejects a NaN or infinite side in any position', () => {
+    for (const bad of [NaN, Infinity, -1]) {
+      expect(() => triangleArea(bad, 1, 1)).toThrow(RangeError);
+      expect(() => triangleArea(1, bad, 1)).toThrow(RangeError);
+      expect(() => triangleArea(1, 1, bad)).toThrow(RangeError);
+    }
+  });
+});

@@ -7,9 +7,11 @@
  * plane, and the length of that diagonal is measured in the same layout. The
  * surface itself does not change: the same metric is just cut into different
  * triangles, so every vertex keeps its angle sum and curvature. Repeating until
- * no edge is non-Delaunay terminates (Bobenko and Springborn 2007), and the
- * cotan Laplacian of the result has non-negative weights, which gives it a
- * maximum principle.
+ * no edge is non-Delaunay terminates (Bobenko and Springborn 2007), and every
+ * interior edge of the result has a non-negative cotan weight. On a closed
+ * surface that gives the Laplacian a maximum principle. A boundary edge has
+ * one opposite angle and cannot be flipped, so it keeps a negative weight
+ * whenever that angle is obtuse.
  *
  * Flips may produce parallel edges, loops and faces that repeat a vertex (a
  * Δ-complex). The intrinsic Delaunay triangulation sometimes needs them, so

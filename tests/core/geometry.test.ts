@@ -102,3 +102,21 @@ describe('areas and angles', () => {
     for (const a of mixed) expect(a).toBeCloseTo(Math.sqrt(3) / 12, 15);
   });
 });
+
+describe('validateEdgeLengths', () => {
+  it('rejects lengths whose fourth power leaves the range of doubles', () => {
+    const mesh = TriangleMesh.fromFaces(3, [0, 1, 2]);
+    // Unchecked, these give an area of 0 or Infinity and NaN angles.
+    expect(() => {
+      validateEdgeLengths(mesh, new Float64Array(3).fill(1e-90));
+    }).toThrow(/rescale the mesh/);
+    expect(() => {
+      validateEdgeLengths(mesh, new Float64Array(3).fill(1e160));
+    }).toThrow(/rescale the mesh/);
+    for (const ok of [1e-75, 1, 1e75]) {
+      expect(() => {
+        validateEdgeLengths(mesh, new Float64Array(3).fill(ok));
+      }).not.toThrow();
+    }
+  });
+});

@@ -50,7 +50,7 @@ describe('laplacianSpectrum', () => {
   });
 
   it('converges at second order to the unit square Neumann eigenvalues', () => {
-    // Measured orders between n = 12 and 24: 1.98 to 2.04 (findings.md).
+    // Measured orders between n = 12 and 24: 1.98 to 2.04 (docs/results.md).
     const coarse = unitSquareSpectrum(12).values;
     const fine = unitSquareSpectrum(24).values;
     for (let k = 1; k < EXACT.length; k++) {

@@ -46,6 +46,12 @@ function checked(mesh: ExportMesh, fields: readonly ExportField[]): { n: number;
   return { n, m: mesh.faces.length / 3 };
 }
 
+/** The formats have a way to write "undefined" (NaN) but none for infinity. */
+function finite(x: number, name: string): number {
+  if (!Number.isFinite(x)) throw new RangeError(`field "${name}" contains ${x}`);
+  return x;
+}
+
 /** Field names become single tokens: runs of anything but letters, digits, '.', '-' turn into '_'. */
 function identifier(name: string): string {
   return name.trim().replace(/[^A-Za-z0-9.-]+/g, '_');
@@ -59,7 +65,7 @@ function identifier(name: string): string {
 export function toVtk(mesh: ExportMesh, fields: readonly ExportField[], title: string): string {
   const { n, m } = checked(mesh, fields);
   // The title is the file's second line: one line, at most 256 characters.
-  const header = title.replace(/\s+/g, ' ').trim().slice(0, 255);
+  const header = title.replace(/\s+/g, ' ').trim().slice(0, 255) || 'Intrinsic mesh';
   const lines = ['# vtk DataFile Version 3.0', header, 'ASCII', 'DATASET UNSTRUCTURED_GRID'];
   lines.push(`POINTS ${n} double`);
   for (let v = 0; v < n; v++) {
@@ -78,7 +84,7 @@ export function toVtk(mesh: ExportMesh, fields: readonly ExportField[], title: s
     lines.push(`SCALARS ${identifier(field.name)} double 1`, 'LOOKUP_TABLE default');
     for (let v = 0; v < n; v++) {
       const x = field.values[v];
-      lines.push(Number.isNaN(x) ? 'nan' : String(x));
+      lines.push(Number.isNaN(x) ? 'nan' : String(finite(x, field.name)));
     }
   }
   return lines.join('\n') + '\n';
@@ -112,7 +118,10 @@ export function toCsv(mesh: ExportMesh, fields: readonly ExportField[]): string 
       mesh.positions[3 * v + 1],
       mesh.positions[3 * v + 2],
     ];
-    for (const field of fields) row.push(Number.isNaN(field.values[v]) ? '' : field.values[v]);
+    for (const field of fields) {
+      const x = field.values[v];
+      row.push(Number.isNaN(x) ? '' : finite(x, field.name));
+    }
     lines.push(row.join(','));
   }
   return lines.join('\n') + '\n';

@@ -73,10 +73,11 @@ function gaussBonnet() {
   let worst = 0;
   let meshes = 0;
   const check = (mesh: TriangleMesh, lengths: Float64Array) => {
+    const flipped = intrinsicDelaunay(mesh, lengths);
     for (const [m, l] of [
       [mesh, lengths],
-      Object.values(intrinsicDelaunay(mesh, lengths)).slice(0, 2),
-    ] as [TriangleMesh, Float64Array][]) {
+      [flipped.mesh, flipped.lengths],
+    ] as const) {
       const residual = gaussBonnetResidual(m, vertexCurvature(m, cornerAngles(m, l)));
       worst = Math.max(worst, Math.abs(residual));
       meshes++;
@@ -217,20 +218,46 @@ function distanceErrors(distance: Float64Array, exact: (v: number) => number) {
   return { max: Math.max(...errors), mean: errors.reduce((a, b) => a + b) / errors.length };
 }
 
-function coneDistance(rings: number) {
+/** Cone of deficit 2. `fromApex` or from a vertex half-way out; exact distance by unfolding the sector. */
+function coneDistance(rings: number, fromApex: boolean) {
   const sectors = 3 * rings;
-  const s = cone({ deficit: 2, rings, sectors });
-  const d = new HeatMethod(s.mesh, s.lengths).distance([0]);
-  return distanceErrors(d, (v) => (v === 0 ? 0 : Math.floor((v - 1) / sectors + 1) / rings));
+  const deficit = 2;
+  const s = cone({ deficit, rings, sectors });
+  const sector = 2 * Math.PI - deficit;
+  const polar = (v: number) =>
+    v === 0
+      ? { radius: 0, angle: 0 }
+      : {
+          radius: Math.floor((v - 1) / sectors + 1) / rings,
+          angle: (((v - 1) % sectors) * sector) / sectors,
+        };
+  const source = fromApex ? 0 : 1 + (rings / 2 - 1) * sectors;
+  const from = polar(source);
+  const d = new HeatMethod(s.mesh, s.lengths).distance([source]);
+  return distanceErrors(d, (v) => {
+    const to = polar(v);
+    const turn = Math.abs(to.angle - from.angle);
+    const between = Math.min(turn, sector - turn);
+    // Straight across the unfolded sector, or through the apex when the angle exceeds π.
+    return between < Math.PI
+      ? Math.sqrt(
+          from.radius ** 2 + to.radius ** 2 - 2 * from.radius * to.radius * Math.cos(between),
+        )
+      : from.radius + to.radius;
+  });
 }
 
-function sphereDistance(rings: number) {
+/** Unit sphere, from a pole or from a vertex on the equator. */
+function sphereDistance(rings: number, fromPole: boolean) {
   const s = ellipsoid(rings, 2 * rings, [1, 1, 1]);
   const point = (v: number) => s.positions.subarray(3 * v, 3 * v + 3);
-  const d = new HeatMethod(s.mesh, edgeLengthsFromPositions(s.mesh, s.positions)).distance([0]);
+  const source = fromPole ? 0 : 1 + (rings / 2 - 1) * 2 * rings;
+  const d = new HeatMethod(s.mesh, edgeLengthsFromPositions(s.mesh, s.positions)).distance([
+    source,
+  ]);
   return {
     vertices: s.mesh.vertexCount,
-    ...distanceErrors(d, (v) => greatCircle(point(v), point(0), 1)),
+    ...distanceErrors(d, (v) => greatCircle(point(v), point(source), 1)),
   };
 }
 
@@ -322,8 +349,16 @@ function main(): void {
   const eigen = [6, 12, 24].map(squareEigenvalueErrors);
   const eigenOrders = eigen[1].map((e, k) => order(e, eigen[2][k]));
   const dense = [289, 625, 1089].map((n) => ({ n, ...eigenResidual(n) }));
-  const cones = [4, 8, 16, 32].map((r) => ({ rings: r, ...coneDistance(r) }));
-  const spheres = [6, 12, 24, 48].map((r) => ({ rings: r, ...sphereDistance(r) }));
+  const cones = [4, 8, 16, 32].map((r) => ({ rings: r, ...coneDistance(r, true) }));
+  const conesOffAxis = [4, 8, 16, 32].map((r) => ({ rings: r, ...coneDistance(r, false) }));
+  const spheres = [6, 12, 24, 48].map((r) => ({ rings: r, ...sphereDistance(r, true) }));
+  const spheresOffAxis = [6, 12, 24, 48].map((r) => ({ rings: r, ...sphereDistance(r, false) }));
+  /** Smallest and largest order of convergence between successive refinements. */
+  const orders = (errors: number[]) => {
+    const all = errors.slice(1).map((e, k) => order(errors[k], e));
+    return `${fixed(Math.min(...all))} to ${fixed(Math.max(...all))}`;
+  };
+  const jitterStalls = jittered[3] > 0.8 * jittered[2];
   const flats = resolutions.map((n) => ({ n, ...flatDistance(n) }));
   const caps = [16, 32, 64].map((n) => ({ n, ...capDistance(n) }));
   const far = farField();
@@ -337,11 +372,11 @@ function main(): void {
 
   const { needles, meshes, geodesics } = agreement;
   const summary = [
-    `- **Gauss–Bonnet.** The angle defects sum to 2πχ within ${sci(gb.worst)} on ${count(gb.meshes)} random meshes (discs, spheres and tori, before and after edge flips).`,
-    `- **Curvature.** On a regular grid the pointwise error falls at second order (${regular.map(sci).join(', ')} at ${resolutions.join(', ')} cells per side). With 15% vertex jitter it stalls (${jittered.map(sci).join(', ')}), which is the known behaviour of angle defects on irregular meshes; the integrated curvature stays exact. A cone's apex defect is right to ${sci(apex)}.`,
+    `- **Gauss–Bonnet.** The angle defects sum to 2πχ within ${sci(gb.worst)} on ${count(gb.meshes)} random meshes (discs, spheres and tori, before and after edge flips). This checks the connectivity and each triangle's angle sum; the individual angles are checked against libigl and mpmath below.`,
+    `- **Curvature.** On a regular grid the pointwise error falls at order ${orders(regular)} (${regular.map(sci).join(', ')} at ${resolutions.join(', ')} cells per side). With 15% vertex jitter it ${jitterStalls ? 'stops falling' : 'still falls'} (${jittered.map(sci).join(', ')}); angle defects are known to converge pointwise only on regular meshes. A cone's apex defect is right to ${sci(apex)}.`,
     `- **Intrinsic Delaunay.** Of ${count(sweep.runs)} random bumps, ${sweep.short} stop short of Delaunay; ${sweep.nonSimplicial} of the ${count(sweep.runs)} need parallel edges or loops to get there. Flipping changes no vertex's curvature by more than ${sci(sweep.curvatureChange)}.`,
     `- **Spectrum.** The first ten eigenvalues of the unit square converge at order ${fixed(Math.min(...eigenOrders))} to ${fixed(Math.max(...eigenOrders))}; at 24 cells per side the worst is off by ${fixed(100 * Math.max(...eigen[2]), 1)}%.`,
-    `- **Geodesic distance.** Against the exact distance, the largest error falls at second order on a cone (${cones.map((c) => sci(c.max)).join(', ')}) and on the unit sphere (${spheres.map((c) => sci(c.max)).join(', ')}). On a flat square with an insulated boundary it falls slowly (mean ${flats.map((c) => sci(c.mean)).join(', ')}).`,
+    `- **Geodesic distance.** From a cone's apex or a sphere's pole, where the problem is symmetric, the largest error against the exact distance falls at order ${orders(cones.map((c) => c.max))} and ${orders(spheres.map((c) => c.max))}. From a general vertex it falls far more slowly: order ${orders(conesOffAxis.map((c) => c.max))} on the cone (${conesOffAxis.map((c) => sci(c.max)).join(', ')}) and ${orders(spheresOffAxis.map((c) => c.max))} on the sphere (${spheresOffAxis.map((c) => sci(c.max)).join(', ')}). That is how the method behaves with its standard time step, not an implementation defect: the same distances agree with potpourri3d's to the fifth digit.`,
     `- **Reference libraries.** Face areas are bit-identical to libigl's. The stiffness matrix differs from libigl's by ${sci(meshes.stiffnessVsLibigl)} (relative), eigenvalues from LAPACK's by ${sci(meshes.eigenvaluesVsLapack)}, heat-method distances from an independent SciPy implementation by ${sci(geodesics.vsDirectReimplementation)} and from potpourri3d by ${sci(geodesics.vsPotpourri3dLargest)}. That last gap is one line of geometry-central, a 1e-6 shift of the Laplacian: with the same shift the SciPy implementation matches potpourri3d to ${sci(geodesics.potpourri3dVsReimplementationWithShift)}.`,
     `- **Thin triangles.** On ${needles.triangles} needle-shaped triangles, area and angles are within ${fixed(needles.kahanAreaRoundoffs)} and ${fixed(needles.kahanAngleRoundoffs)} units of roundoff of 80-digit arithmetic. The textbook Heron formula is wrong beyond 1e-8 on ${needles['heronWrongBeyond1e-8']} of them.`,
   ].join('\n');
@@ -376,7 +411,7 @@ ${table(
   ]),
 )}
 
-The jittered column is not a defect of this implementation. Angle-defect curvature converges pointwise only on meshes with special regularity (Borrelli, Cazals and Morvan 2003). What converges on any mesh is the integral, and its total is exact: the Gauss–Bonnet sum is within ${sci(gb.worst)} of 2πχ on all ${count(gb.meshes)} random meshes tried.
+The jittered column is not a defect of this implementation. Angle-defect curvature converges pointwise only on meshes with special regularity (Borrelli, Cazals and Morvan 2003). The total over the mesh is exact because it is topological: the Gauss–Bonnet sum is within ${sci(gb.worst)} of 2πχ on all ${count(gb.meshes)} random meshes tried. That sum checks the connectivity and each triangle's angle sum, not the individual angles; it would also hold if every angle were replaced by π/3.
 
 ## Intrinsic Delaunay triangulation
 
@@ -404,7 +439,7 @@ ${table(
 
 Largest and mean error against the exact distance from the source.
 
-Cone with apex deficit 2, from the apex (exact: the slant distance):
+Cone with apex deficit 2, from the apex (exact: the slant distance). The source is on the axis of symmetry, which makes this a one-dimensional problem:
 
 ${table(
   ['Rings × sectors', 'Largest', 'Mean', 'Order'],
@@ -428,6 +463,20 @@ ${table(
   ]),
 )}
 
+The same two surfaces from a general vertex (half-way out on the cone, on the equator of the sphere). This is the typical case:
+
+${table(
+  ['Cone, rings × sectors', 'Largest', 'Order', 'Sphere, vertices', 'Largest', 'Order'],
+  conesOffAxis.map((c, k) => [
+    `${c.rings} × ${3 * c.rings}`,
+    sci(c.max),
+    k === 0 ? '' : fixed(order(conesOffAxis[k - 1].max, c.max)),
+    count(spheresOffAxis[k].vertices),
+    sci(spheresOffAxis[k].max),
+    k === 0 ? '' : fixed(order(spheresOffAxis[k - 1].max, spheresOffAxis[k].max)),
+  ]),
+)}
+
 Flat square [−1, 1]², from the centre (exact: the straight-line distance):
 
 ${table(
@@ -435,7 +484,7 @@ ${table(
   flats.map((c) => [c.n, sci(c.max), sci(c.mean)]),
 )}
 
-Spherical cap of radius 1.6 over the same square, from the centre. The grid triangles stretch towards the corners; flipping to the intrinsic Delaunay triangulation repairs the method:
+Spherical cap of radius 1.6 over the same square, from the centre. The grid triangles stretch towards the corners; flipping to the intrinsic Delaunay triangulation reduces the largest error:
 
 ${table(
   ['Cells per side', 'Flips', 'Largest error as generated', 'After flipping'],

@@ -5,7 +5,9 @@
  * triangles, where two sides nearly sum to the third. This is Kahan's
  * rearrangement: with the sides sorted so that x >= y >= z, every factor under
  * the square root is formed without catastrophic cancellation, so the result
- * is accurate to a few ulps whatever the triangle's shape.
+ * is accurate to a few ulps whatever the triangle's shape, as long as the
+ * product of four lengths stays in range (lengths between about 1e-75 and
+ * 1e75; validateEdgeLengths enforces that for a mesh).
  *
  * W. Kahan, "Miscalculating Area and Angles of a Needle-like Triangle",
  * lecture notes, 1999, section 2.
@@ -14,6 +16,10 @@
  *   violate the triangle inequality. Degenerate (collinear) triangles have area 0.
  */
 export function triangleArea(a: number, b: number, c: number): number {
+  // Checked before sorting: comparisons with NaN would leave it unsorted.
+  if (!(a >= 0 && b >= 0 && c >= 0) || !Number.isFinite(a + b + c)) {
+    throw new RangeError(`edge lengths must be finite and non-negative: ${a}, ${b}, ${c}`);
+  }
   let x = a;
   let y = b;
   let z = c;
@@ -32,9 +38,6 @@ export function triangleArea(a: number, b: number, c: number): number {
     t = x;
     x = y;
     y = t;
-  }
-  if (!(z >= 0) || !Number.isFinite(x)) {
-    throw new RangeError(`edge lengths must be finite and non-negative: ${a}, ${b}, ${c}`);
   }
   const zMinusXMinusY = z - (x - y);
   if (zMinusXMinusY < 0) {

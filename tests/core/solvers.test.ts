@@ -106,3 +106,21 @@ describe('conjugateGradient', () => {
     expect(() => conjugateGradient(singular, Float64Array.of(1, 1))).toThrow(/Jacobi/);
   });
 });
+
+describe('conjugateGradient on matrices it is not meant for', () => {
+  it('stops with a finite iterate and says so when the matrix is indefinite', () => {
+    const indefinite = CsrMatrix.fromTriplets(2, 2, [0, 1], [0, 1], [1, -1]);
+    const result = conjugateGradient(indefinite, Float64Array.of(1, 1), { preconditioner: 'none' });
+    expect(result.breakdown).toBe(true);
+    expect(result.converged).toBe(false);
+    expect(Array.from(result.x).every(Number.isFinite)).toBe(true);
+    expect(Number.isFinite(result.relativeResidual)).toBe(true);
+  });
+
+  it('does not report a breakdown on a positive definite system', () => {
+    const identity = CsrMatrix.fromTriplets(2, 2, [0, 1], [0, 1], [2, 3]);
+    const result = conjugateGradient(identity, Float64Array.of(1, 1));
+    expect(result.breakdown).toBe(false);
+    expect(result.converged).toBe(true);
+  });
+});

@@ -61,8 +61,8 @@ function strip(m: number): { mesh: TriangleMesh; lengths: Float64Array } {
 describe('HeatMethod', () => {
   it('approaches Euclidean distance on the flat square under refinement', () => {
     // Measured mean errors from the centre: 4.5e-2, 2.6e-2, 1.6e-2 at
-    // n = 8, 16, 32 (findings.md). Convergence is slow here because of the
-    // insulated boundary; compare the cone and the sphere below.
+    // n = 8, 16, 32 (docs/results.md). This slow, roughly first-order
+    // convergence is the general case; see the off-axis test below.
     const bounds = [0.05, 0.03, 0.018];
     let previous = Infinity;
     for (const [k, n] of [8, 16, 32].entries()) {
@@ -79,7 +79,7 @@ describe('HeatMethod', () => {
     }
   });
 
-  it('converges at second order to the slant distance from the apex of a cone', () => {
+  it('converges at second order from the apex of a cone, a symmetric special case', () => {
     // Measured max errors: 3.98e-3 and 9.95e-4 (order 2.00).
     const run = (rings: number, sectors: number) => {
       const s = cone({ deficit: 2, rings, sectors });
@@ -97,7 +97,7 @@ describe('HeatMethod', () => {
     expect(Math.log2(coarse / fine)).toBeGreaterThan(1.8);
   });
 
-  it('converges at second order to great-circle distance on the unit sphere', () => {
+  it('converges at second order from the pole of the unit sphere, likewise symmetric', () => {
     // Measured max errors: 2.23e-2 and 5.60e-3 (order 1.99).
     const run = (n: number) => {
       const s = ellipsoid(n, 2 * n, [1, 1, 1]);
@@ -108,6 +108,25 @@ describe('HeatMethod', () => {
     const fine = run(24);
     expect(fine).toBeLessThan(7e-3);
     expect(Math.log2(coarse / fine)).toBeGreaterThan(1.8);
+  });
+
+  it('converges at about first order from a general vertex', () => {
+    // From the apex or a pole the problem is one-dimensional and the error
+    // falls at second order. From any other vertex it does not. Measured
+    // largest errors from an equator vertex of the sphere: 1.3e-1 and 8.5e-2.
+    const run = (n: number) => {
+      const s = ellipsoid(n, 2 * n, [1, 1, 1]);
+      const source = 1 + Math.floor(n / 2 - 1) * 2 * n;
+      const d = new HeatMethod(s.mesh, edgeLengthsFromPositions(s.mesh, s.positions)).distance([
+        source,
+      ]);
+      return errors(d, (v) => greatCircle(point(s, v), point(s, source), 1)).max;
+    };
+    const coarse = run(12);
+    const fine = run(24);
+    expect(fine).toBeLessThan(coarse);
+    expect(fine).toBeLessThan(0.1);
+    expect(Math.log2(coarse / fine)).toBeLessThan(1.2);
   });
 
   it('is more accurate on the intrinsic Delaunay triangulation', () => {
@@ -181,8 +200,10 @@ describe('HeatMethod', () => {
   it('ignores faces the heat reaches from all sides at once', () => {
     // From one vertex of a regular tetrahedron the opposite face is equally
     // far at all three corners, so u is constant there up to rounding.
-    // Normalizing that rounding noise gave distances of 0.76, 0.76 and 1.08
-    // to three vertices that symmetry makes equidistant.
+    // Normalizing that rounding noise gave 0.76, 0.76 and 1.08 for three
+    // vertices that symmetry makes equidistant. The value checked, √3/2, is
+    // what the method returns on four vertices, not the distance (which is 1):
+    // this mesh is far too coarse and the test is about symmetry only.
     const tetrahedron = TriangleMesh.fromFaces(4, [0, 1, 2, 0, 2, 3, 0, 3, 1, 1, 3, 2]);
     const d = new HeatMethod(tetrahedron, new Float64Array(6).fill(1)).distance([0]);
     expect(d[0]).toBe(0);
@@ -228,6 +249,22 @@ describe('HeatMethod', () => {
     );
     const d = new HeatMethod(s.mesh, s.lengths, { timeCoefficient: 100 }).distance([0]);
     expect(Math.abs(d[2000] - 1000)).toBeLessThan(0.5);
+  });
+
+  it('refuses a time step so long that the heat evens out', () => {
+    // Unchecked, a coefficient of 1e13 gave a corner-to-corner distance of
+    // 1.35 on the flat square (true 2.83), and 1e15 gave zero everywhere.
+    const s = plane({ resolution: 16 });
+    const solver = new HeatMethod(s.mesh, s.lengths, { timeCoefficient: 1e15 });
+    expect(() => solver.distance([0])).toThrow(/constant to rounding on \d+ of 512 faces/);
+    const fine = new HeatMethod(s.mesh, s.lengths, { timeCoefficient: 1e6 }).distance([0]);
+    expect(fine[fine.length - 1]).toBeGreaterThan(2.5);
+    expect(fine[fine.length - 1]).toBeLessThan(3.2);
+  });
+
+  it('rejects edge lengths that do not make triangles', () => {
+    const mesh = TriangleMesh.fromFaces(3, [0, 1, 2]);
+    expect(() => new HeatMethod(mesh, Float64Array.of(1, 2, 1))).toThrow(/degenerate/);
   });
 
   it('rejects bad sources and disconnected meshes', () => {

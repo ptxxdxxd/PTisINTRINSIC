@@ -10,9 +10,9 @@ import { symmetricEigen } from './eigen.ts';
 import type { CsrMatrix } from './sparse.ts';
 
 /**
- * Largest mesh the dense eigensolver accepts. Its cost grows as n³: about
- * 1.2 s at 625 vertices and 5.7 s at 1,089 under Node 22 (measured
- * 2026-11-12), so beyond this a sparse eigensolver is needed.
+ * Largest mesh the dense eigensolver accepts. Its cost grows as n³, from
+ * about a second to several seconds over the last doubling (docs/results.md
+ * has measured times), so beyond this a sparse eigensolver is needed.
  */
 export const DENSE_EIGEN_LIMIT = 1100;
 
