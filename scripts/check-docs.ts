@@ -72,9 +72,9 @@ const prose = (readme.slice(0, readme.indexOf(START)) + readme.slice(readme.inde
   .replace(/`[^`]*`/g, '')
   .replace(/\]\([^)]*\)/g, ']');
 for (const match of prose.matchAll(/\d+\.\d+(?:e[-+]?\d+)?|\d+e[-+]?\d+/gi)) {
-  // Version numbers of the runtimes and the licence are not measurements.
+  // Version numbers of the runtimes, the licence and WCAG are not measurements.
   const context = prose.slice(Math.max(0, match.index - 12), match.index);
-  if (/(Node|Python|,|or) $|Apache-$/.test(context)) continue;
+  if (/(Node|Python|WCAG|,|or) $|Apache-$/.test(context)) continue;
   problems.push(`README.md: "${match[0]}" is a number outside the generated results section`);
 }
 

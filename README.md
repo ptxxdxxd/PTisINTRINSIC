@@ -39,7 +39,8 @@ preset is the exact flat cone, not a polyhedral approximation of one.
    code, one at a time, and requires a test to fail for each. The few that no correctness test
    can catch are listed with the reason. It is a curated list, not a mutation score.
 5. **The app itself.** Playwright drives every surface and field on a desktop and a phone screen
-   and allows no console errors or warnings.
+   and allows no console errors or warnings. axe checks each view against WCAG 2.1 AA, in the
+   light and the dark colour scheme.
 
 ## Results
 

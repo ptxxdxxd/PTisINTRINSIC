@@ -117,6 +117,16 @@ test('clicking the surface inspects a vertex and moves the distance source', asy
   expect(problems).toEqual([]);
 });
 
+test('tapping the surface on a touch screen inspects a vertex', async ({ page, hasTouch }) => {
+  test.skip(!hasTouch, 'needs a touch screen');
+  const problems = await open(page);
+  const box = await canvas(page).boundingBox();
+  if (box === null) throw new Error('canvas has no box');
+  await page.touchscreen.tap(box.x + box.width * 0.44, box.y + box.height * 0.55);
+  await expect(page.getByTestId('inspector')).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
 test('exports download files with the mesh on screen', async ({ page }) => {
   const problems = await open(page);
   const vertices = await value(page, 'counts');
