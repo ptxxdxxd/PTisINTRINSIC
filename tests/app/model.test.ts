@@ -220,6 +220,16 @@ describe('fields and colours', () => {
     expect(Object.keys(FIELDS)).toHaveLength(7);
   });
 
+  it('draws exact and computed curvature of a flat surface on the same scale', () => {
+    // Both are zero up to rounding here. Switching between the two views should not change
+    // the scale from ±1e-9 to ±1.
+    const { fields } = new Session(PRESETS.plane.spec, 'input');
+    const scale = (id: 'gaussian' | 'exact') =>
+      fieldRange(fields[id], FIELDS[id].map, FIELDS[id].floor);
+    expect(scale('exact')).toEqual(scale('gaussian'));
+    expect(scale('exact')).toEqual([-1e-9, 1e-9]);
+  });
+
   it('picks round contour spacings', () => {
     expect(contourStep([0, 2.5])).toBeCloseTo(0.2, 12);
     expect(contourStep([0, 14])).toBe(1);

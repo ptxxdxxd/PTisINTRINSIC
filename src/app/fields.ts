@@ -27,6 +27,7 @@ export const FIELDS: Readonly<Record<FieldId, FieldInfo>> = {
     label: 'Exact curvature of the smooth surface',
     map: 'diverging',
     note: 'From the formula for the surface, for comparison. Not defined at a cone’s apex.',
+    floor: 1e-9,
   },
   error: {
     label: 'Curvature error (computed − exact)',

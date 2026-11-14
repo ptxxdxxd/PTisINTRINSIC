@@ -30,6 +30,7 @@ function Slider(props: {
         max={props.max}
         step={props.step}
         value={props.value}
+        aria-valuetext={props.display}
         onChange={(event) => {
           props.onChange(Number(event.target.value));
         }}
