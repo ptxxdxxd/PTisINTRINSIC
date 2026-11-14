@@ -27,6 +27,7 @@ import { cornerCotangents, cotanLaplacian } from './laplacian.ts';
 import { MeshError, type TriangleMesh } from './mesh.ts';
 import { CsrMatrix } from './sparse.ts';
 import { compensatedSum } from './summation.ts';
+import { cosineNumerator } from './triangle.ts';
 
 /** Smallest positive double with full precision, 2^-1022. */
 const SMALLEST_NORMAL = 2.2250738585072014e-308;
@@ -80,7 +81,7 @@ export class HeatMethod {
       const side = faceEdgeLengths(mesh, lengths, f);
       const base = side[2];
       this.layout[3 * f] = base;
-      this.layout[3 * f + 1] = (side[1] * side[1] + base * base - side[0] * side[0]) / (2 * base);
+      this.layout[3 * f + 1] = cosineNumerator(side[0], side[1], base) / (2 * base);
       this.layout[3 * f + 2] = (2 * area[f]) / base;
     }
 

@@ -85,3 +85,16 @@ export function triangleAngle(c: number, a: number, b: number): number {
   // and atan(Infinity) = π/2, so the result is exactly π.
   return 2 * Math.atan(Math.sqrt(((p - q + c) * mu) / ((p + (q + c)) * longSide)));
 }
+
+/**
+ * b² + c² − a², the numerator of the law of cosines for the angle opposite the
+ * side a (so cot of that angle is this over four times the area).
+ *
+ * Written as b·b + c·c − a·a it cancels badly in a thin triangle, where a
+ * nearly equals one of the other sides: with sides 1, 1 and 7e-4 the result
+ * has only six correct digits. Here a is paired with the nearer of b and c,
+ * whose difference is small and computed almost exactly.
+ */
+export function cosineNumerator(a: number, b: number, c: number): number {
+  return Math.abs(b - a) <= Math.abs(c - a) ? c * c + (b - a) * (b + a) : b * b + (c - a) * (c + a);
+}

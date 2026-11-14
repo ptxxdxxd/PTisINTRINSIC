@@ -24,7 +24,7 @@
  */
 import { cotanWeights } from './laplacian.ts';
 import { nextHalfedge, prevHalfedge, type TriangleMesh } from './mesh.ts';
-import { triangleAngle, triangleArea } from './triangle.ts';
+import { cosineNumerator, triangleAngle, triangleArea } from './triangle.ts';
 
 /**
  * Edges with cotan weight below −tolerance are treated as non-Delaunay. The
@@ -112,7 +112,7 @@ function cornerCotangent(mesh: TriangleMesh, lengths: Float64Array, h: number): 
   const a = lengths[mesh.halfedgeEdge[h]];
   const b = lengths[mesh.halfedgeEdge[nextHalfedge(h)]];
   const c = lengths[mesh.halfedgeEdge[prevHalfedge(h)]];
-  return (b * b + c * c - a * a) / (4 * triangleArea(a, b, c));
+  return cosineNumerator(a, b, c) / (4 * triangleArea(a, b, c));
 }
 
 /** Interior angle at the tail of halfedge h, in the face of h. */

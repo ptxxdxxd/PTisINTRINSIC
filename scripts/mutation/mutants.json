@@ -373,5 +373,11 @@
     "find": "    const size = Math.max(Math.abs(low), Math.abs(high), floor) || 1;",
     "replace": "    const size = Math.max(Math.abs(low), Math.abs(high)) || 1;",
     "label": "app: rounding noise drawn in full colour"
+  },
+  {
+    "file": "src/core/triangle.ts",
+    "find": "  return Math.abs(b - a) <= Math.abs(c - a) ? c * c + (b - a) * (b + a) : b * b + (c - a) * (c + a);",
+    "replace": "  return b * b + c * c - a * a;",
+    "label": "triangle: law-of-cosines numerator in its cancelling form"
   }
 ]

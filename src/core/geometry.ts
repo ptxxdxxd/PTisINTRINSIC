@@ -4,7 +4,7 @@
  * lengths; no function in this module looks at an embedding.
  */
 import { nextHalfedge, prevHalfedge, type TriangleMesh } from './mesh.ts';
-import { triangleAngle, triangleArea } from './triangle.ts';
+import { cosineNumerator, triangleAngle, triangleArea } from './triangle.ts';
 
 /** Euclidean length of every edge, from vertex positions stored as xyz triples. */
 export function edgeLengthsFromPositions(
@@ -131,19 +131,19 @@ export function vertexAreas(
       continue;
     }
     const sq = [side[0] * side[0], side[1] * side[1], side[2] * side[2]] as const;
-    // Corner c is obtuse exactly when its opposite side squared exceeds the
-    // sum of the other two squared (law of cosines).
-    const obtuse = [sq[0] > sq[1] + sq[2], sq[1] > sq[2] + sq[0], sq[2] > sq[0] + sq[1]];
+    // (adjacent sides squared − opposite side squared) for each corner: the
+    // numerator of its cosine and of its cotangent, negative when it is obtuse.
+    const numerator = [
+      cosineNumerator(side[0], side[1], side[2]),
+      cosineNumerator(side[1], side[2], side[0]),
+      cosineNumerator(side[2], side[0], side[1]),
+    ];
+    const obtuse = numerator.map((x) => x < 0);
     if (obtuse[0] || obtuse[1] || obtuse[2]) {
       for (let c = 0; c < 3; c++) areas[vertex[3 * f + c]] += obtuse[c] ? area / 2 : area / 4;
       continue;
     }
-    // cot of the angle at corner c is (sum of adjacent sides squared - opposite squared) / 4A.
-    const cot = [
-      (sq[1] + sq[2] - sq[0]) / (4 * area),
-      (sq[2] + sq[0] - sq[1]) / (4 * area),
-      (sq[0] + sq[1] - sq[2]) / (4 * area),
-    ];
+    const cot = numerator.map((x) => x / (4 * area));
     for (let c = 0; c < 3; c++) {
       const c1 = (c + 1) % 3;
       const c2 = (c + 2) % 3;

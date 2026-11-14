@@ -1,6 +1,6 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { triangleAngle, triangleArea } from '../../src/core/triangle.ts';
+import { cosineNumerator, triangleAngle, triangleArea } from '../../src/core/triangle.ts';
 
 describe('triangleArea', () => {
   it('is exact on a 3-4-5 right triangle', () => {
@@ -178,6 +178,25 @@ describe('thin triangles', () => {
       expect(() => triangleArea(bad, 1, 1)).toThrow(RangeError);
       expect(() => triangleArea(1, bad, 1)).toThrow(RangeError);
       expect(() => triangleArea(1, 1, bad)).toThrow(RangeError);
+    }
+  });
+});
+
+describe('cosineNumerator', () => {
+  it('equals b² + c² − a² on ordinary triangles', () => {
+    expect(cosineNumerator(5, 3, 4)).toBe(0);
+    expect(cosineNumerator(3, 4, 5)).toBe(32);
+    expect(cosineNumerator(4, 5, 3)).toBe(18);
+    expect(cosineNumerator(1, 1, 1)).toBe(1);
+  });
+
+  it('keeps every digit where the plain expression cancels', () => {
+    // Opposite side 1, adjacent sides 1 and x: the exact answer is x².
+    for (const x of [7e-4, 1e-5, 1e-7, 1e-9]) {
+      expect(cosineNumerator(1, 1, x)).toBe(x * x);
+      expect(cosineNumerator(1, x, 1)).toBe(x * x);
+      // The plain form is off in the sixth digit at 7e-4 and wrong altogether at 1e-9.
+      expect(Math.abs(1 + x * x - 1 - x * x) / (x * x)).toBeGreaterThan(1e-11);
     }
   });
 });

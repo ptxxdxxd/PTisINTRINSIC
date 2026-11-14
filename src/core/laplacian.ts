@@ -16,7 +16,7 @@
 import { faceEdgeLengths } from './geometry.ts';
 import { nextHalfedge, type TriangleMesh } from './mesh.ts';
 import { CsrMatrix } from './sparse.ts';
-import { triangleArea } from './triangle.ts';
+import { cosineNumerator, triangleArea } from './triangle.ts';
 
 /**
  * Cotangent of each corner angle, indexed by halfedge like cornerAngles:
@@ -27,10 +27,9 @@ export function cornerCotangents(mesh: TriangleMesh, lengths: Float64Array): Flo
   for (let f = 0; f < mesh.faceCount; f++) {
     const side = faceEdgeLengths(mesh, lengths, f);
     const fourArea = 4 * triangleArea(side[0], side[1], side[2]);
-    const sq = [side[0] * side[0], side[1] * side[1], side[2] * side[2]] as const;
-    cot[3 * f] = (sq[1] + sq[2] - sq[0]) / fourArea;
-    cot[3 * f + 1] = (sq[2] + sq[0] - sq[1]) / fourArea;
-    cot[3 * f + 2] = (sq[0] + sq[1] - sq[2]) / fourArea;
+    cot[3 * f] = cosineNumerator(side[0], side[1], side[2]) / fourArea;
+    cot[3 * f + 1] = cosineNumerator(side[1], side[2], side[0]) / fourArea;
+    cot[3 * f + 2] = cosineNumerator(side[2], side[0], side[1]) / fourArea;
   }
   return cot;
 }

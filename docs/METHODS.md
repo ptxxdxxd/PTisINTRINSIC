@@ -21,7 +21,7 @@ good intrinsically, and some surfaces have no Delaunay triangulation without one
 `triangle.ts`. Area and angles of a triangle from its three side lengths. Heron's formula and the
 law of cosines lose all accuracy on thin triangles, where two sides nearly add up to the third.
 Kahan's rearrangements [1] keep a relative error of a few units of roundoff for every triangle.
-They are tested against 80-digit arithmetic on thin triangles built for the purpose.
+They are tested against 80-digit arithmetic on thin triangles built for the purpose. Cotangents need the same care: the numerator b² + c² − a² is formed by pairing a with the nearer of the other two sides, which keeps every digit where the plain expression keeps six, or none.
 
 ## Curvature
 

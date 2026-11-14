@@ -120,3 +120,23 @@ describe('validateEdgeLengths', () => {
     }
   });
 });
+
+describe('vertex areas on thin triangles', () => {
+  it('still partition the surface area to rounding', () => {
+    // A fan of 20 needles around a vertex: two sides 1, the third tiny. With
+    // cotangents formed as b² + c² − a² the mixed areas were off by 7e-11
+    // (relative) at a base of 7e-4 and by 4e-4 at 1e-7. A property test caught
+    // it as a failure once in about thirty runs.
+    for (const base of [7e-4, 1e-5, 1e-7]) {
+      const faces: number[] = [];
+      for (let j = 0; j < 20; j++) faces.push(0, 1 + j, 1 + ((j + 1) % 20));
+      const mesh = TriangleMesh.fromFaces(21, faces);
+      const lengths = Float64Array.from({ length: mesh.edgeCount }, (_, e) =>
+        mesh.edgeVertices(e).includes(0) ? 1 : base,
+      );
+      const total = compensatedSum(faceAreas(mesh, lengths));
+      const mixed = compensatedSum(vertexAreas(mesh, lengths, 'mixed'));
+      expect(Math.abs(mixed - total)).toBeLessThanOrEqual(1e-14 * total);
+    }
+  });
+});

@@ -13,7 +13,7 @@ Every number in the README's results section is copied from the summary below. T
 - **Intrinsic Delaunay.** Of 3,000 random bumps, 0 stop short of Delaunay; 20 of the 3,000 need parallel edges or loops to get there. Flipping changes no vertex's curvature by more than 2.7e-15.
 - **Spectrum.** The first ten eigenvalues of the unit square converge at order 1.98 to 2.04; at 24 cells per side the worst is off by 1.4%.
 - **Geodesic distance.** From a cone's apex or a sphere's pole, where the problem is symmetric, the largest error against the exact distance falls at order 2.00 to 2.00 and 1.98 to 2.00. From a general vertex it falls far more slowly: order 0.67 to 0.98 on the cone (1.8e-1, 9.3e-2, 4.8e-2, 3.0e-2) and 0.47 to 0.83 on the sphere (2.4e-1, 1.3e-1, 8.5e-2, 6.1e-2). That is how the method behaves with its standard time step, not an implementation defect: the same distances agree with potpourri3d's to the fifth digit.
-- **Reference libraries.** Face areas are bit-identical to libigl's. The stiffness matrix differs from libigl's by 4.0e-16 (relative), eigenvalues from LAPACK's by 1.7e-14, heat-method distances from an independent SciPy implementation by 1.9e-14 and from potpourri3d by 2.0e-5. That last gap is one line of geometry-central, a 1e-6 shift of the Laplacian: with the same shift the SciPy implementation matches potpourri3d to 2.9e-15.
+- **Reference libraries.** Face areas are bit-identical to libigl's. The stiffness matrix differs from libigl's by 4.0e-16 (relative), eigenvalues from LAPACK's by 1.8e-14, heat-method distances from an independent SciPy implementation by 1.8e-14 and from potpourri3d by 2.0e-5. That last gap is one line of geometry-central, a 1e-6 shift of the Laplacian: with the same shift the SciPy implementation matches potpourri3d to 2.9e-15.
 - **Thin triangles.** On 185 needle-shaped triangles, area and angles are within 1.93 and 2.12 units of roundoff of 80-digit arithmetic. The textbook Heron formula is wrong beyond 1e-8 on 85 of them.
 
 <!-- results:end -->
@@ -51,9 +51,9 @@ Dense symmetric eigensolver on random matrices:
 
 | Size | Largest residual of A v − λ v | Time   |
 | ---- | ----------------------------- | ------ |
-| 289  | 3.0e-14                       | 0.10 s |
-| 625  | 1.9e-14                       | 1.12 s |
-| 1089 | 8.8e-14                       | 6.11 s |
+| 289  | 3.0e-14                       | 0.12 s |
+| 625  | 1.9e-14                       | 1.19 s |
+| 1089 | 8.8e-14                       | 6.14 s |
 
 ## Heat-method geodesic distance
 
@@ -105,13 +105,13 @@ Spherical cap of radius 1.6 over the same square, from the centre. The grid tria
 
 ### Why a direct solver
 
-One backward-Euler heat step from a corner of a 65 × 65 grid (4,225 vertices). The smallest true value is 7.4e-37. Conjugate gradients at a relative residual of 1e-15 stop after 51 iterations with 2,511 values that are zero or negative; the sparse Cholesky solve has 0. The method needs the direction of the gradient of those tiny values.
+One backward-Euler heat step from a corner of a 65 × 65 grid (4,225 vertices). The smallest true value is 7.4e-37. Conjugate gradients at a relative residual of 1e-15 stop after 51 iterations with 2,530 values that are zero or negative; the sparse Cholesky solve has 0. The method needs the direction of the gradient of those tiny values.
 
 | Vertices | Numbers in the factor | Factor | Solve  |
 | -------- | --------------------- | ------ | ------ |
-| 1,089    | 25,553                | 3 ms   | 0.2 ms |
-| 4,225    | 189,345               | 11 ms  | 0.7 ms |
-| 16,641   | 1,455,937             | 140 ms | 7.1 ms |
+| 1,089    | 25,553                | 1 ms   | 0.1 ms |
+| 4,225    | 189,345               | 11 ms  | 0.8 ms |
+| 16,641   | 1,455,937             | 138 ms | 7.5 ms |
 
 ## Agreement with reference libraries
 
@@ -123,8 +123,8 @@ From `oracle/measure_agreement.py`, on 7 meshes, 14 distance cases and 185 thin 
 | Angle defect                    | libigl                                      | 2.6e-15                |
 | Cotan stiffness matrix          | libigl                                      | 4.0e-16                |
 | Laplacian after Delaunay flips  | libigl                                      | 6.8e-16                |
-| Eigenvalues                     | LAPACK (SciPy)                              | 1.7e-14                |
-| Heat-method distance            | SciPy re-implementation                     | 1.9e-14                |
+| Eigenvalues                     | LAPACK (SciPy)                              | 1.8e-14                |
+| Heat-method distance            | SciPy re-implementation                     | 1.8e-14                |
 | Heat-method distance            | potpourri3d                                 | 2.0e-5                 |
 | potpourri3d                     | SciPy re-implementation with its 1e-6 shift | 2.9e-15                |
 | Triangle area, thin triangles   | mpmath, 80 digits                           | 1.93 units of roundoff |

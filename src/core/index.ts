@@ -49,4 +49,4 @@ export {
   type KnownCurvature,
   type Surface,
 } from './surfaces.ts';
-export { triangleAngle, triangleArea } from './triangle.ts';
+export { cosineNumerator, triangleAngle, triangleArea } from './triangle.ts';
