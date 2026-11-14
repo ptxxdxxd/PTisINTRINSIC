@@ -169,13 +169,18 @@ h2 {
   font-size: 0.85rem;
 }
 
+.field.inline {
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+}
+
 .check {
   grid-template-columns: auto 1fr;
   justify-content: start;
 }
 
 select,
-button {
+button,
+input[type='number'] {
   font: inherit;
   color: inherit;
   padding: 0.4rem 0.6rem;

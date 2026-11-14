@@ -75,9 +75,18 @@ test('clicking the surface inspects a vertex and moves the distance source', asy
   await expect(sources).toContainText(/From vertex \d+\./);
   await expect(status(page)).toHaveText('Ready');
 
+  // The same from the keyboard: type a vertex number.
+  await page.getByLabel('Source vertex').fill('7');
+  await expect(sources).toContainText('From vertex 7.');
+  await expect(status(page)).toHaveText('Ready');
+
   // Shift-click adds a second source.
+  // Typing scrolled the page on a phone; find the canvas again.
+  await canvas(page).scrollIntoViewIfNeeded();
+  const moved = await canvas(page).boundingBox();
+  if (moved === null) throw new Error('canvas has no box');
   await page.keyboard.down('Shift');
-  await page.mouse.click(box.x + box.width * 0.56, box.y + box.height * 0.6);
+  await page.mouse.click(moved.x + moved.width * 0.56, moved.y + moved.height * 0.6);
   await page.keyboard.up('Shift');
   await expect(sources).toContainText(/From vertex \d+, \d+\./);
   await expect(status(page)).toHaveText('Ready');

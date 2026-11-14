@@ -247,6 +247,24 @@ export function App() {
                 : `From vertex ${sources.join(', ')}. Click to move the source; shift-click to add one.`}
             </p>
           )}
+          {field === 'distance' && built !== null && (
+            <label className="field inline">
+              <span>Source vertex</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={built.summary.vertices - 1}
+                value={sources.length === 0 ? '' : sources[sources.length - 1]}
+                onChange={(event) => {
+                  const vertex = event.target.valueAsNumber;
+                  if (Number.isInteger(vertex) && vertex >= 0 && vertex < built.summary.vertices) {
+                    pickVertex(vertex, false);
+                  }
+                }}
+              />
+            </label>
+          )}
           <label className="check">
             <input
               type="checkbox"
