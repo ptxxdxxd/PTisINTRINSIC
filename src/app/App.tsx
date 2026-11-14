@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { toCsv, toObj, toVtk, type ExportField } from '../core/index.ts';
 import { ComputeClient } from './client.ts';
 import { cssGradient } from './colormap.ts';
@@ -36,25 +36,6 @@ export function App() {
   const [spectrumBusy, setSpectrumBusy] = useState(false);
   const [pending, setPending] = useState(0);
   const [mode, setMode] = useState(1);
-
-  useEffect(() => {
-    let current = true;
-    client()
-      .build(job.spec, job.triangulation)
-      .then(
-        (built) => {
-          if (!current) return;
-          setResult({ job, built });
-          setProblem(null);
-        },
-        (error: unknown) => {
-          if (current) setProblem(message(error));
-        },
-      );
-    return () => {
-      current = false;
-    };
-  }, [job]);
 
   const built = result?.built ?? null;
   const building = result?.job !== job && problem === null;
@@ -109,13 +90,45 @@ export function App() {
       );
   };
 
+  // A distance or eigenfunction view shows numbers computed on one surface. When a new
+  // surface arrives, compute them again rather than leave the view empty.
+  const refreshView = useEffectEvent((target: Built) => {
+    if (field === 'distance') measureFrom(target, [Math.floor(target.summary.vertices / 2)]);
+    if (field === 'eigen' && target.summary.spectrumAvailable) computeSpectrum(target);
+  });
+
+  useEffect(() => {
+    let current = true;
+    client()
+      .build(job.spec, job.triangulation)
+      .then(
+        (built) => {
+          if (!current) return;
+          setResult({ job, built });
+          setProblem(null);
+          refreshView(built);
+        },
+        (error: unknown) => {
+          if (current) setProblem(message(error));
+        },
+      );
+    return () => {
+      current = false;
+    };
+  }, [job]);
+
   const chooseField = (next: FieldId) => {
     setField(next);
     if (built === null || building) return;
     if (next === 'distance' && sources.length === 0) {
       measureFrom(built, [Math.floor(built.summary.vertices / 2)]);
     }
-    if (next === 'eigen' && spectrumData === null && built.summary.spectrumAvailable) {
+    if (
+      next === 'eigen' &&
+      spectrumData === null &&
+      !spectrumBusy &&
+      built.summary.spectrumAvailable
+    ) {
       computeSpectrum(built);
     }
   };
@@ -138,6 +151,8 @@ export function App() {
     () => fieldRange(values, info.map, info.floor),
     [values, info.map, info.floor],
   );
+  // Nothing to show yet (a spectrum still computing): no numbers on the colour bar.
+  const defined = useMemo(() => values.some(Number.isFinite), [values]);
   const spacing = contours || field === 'distance' ? contourStep(range) : 0;
 
   const exportFields = (target: Built): ExportField[] => {
@@ -187,9 +202,9 @@ export function App() {
           </Suspense>
         )}
         <div className="legend" aria-hidden={built === null}>
-          <span data-testid="legend-low">{formatNumber(range[0])}</span>
+          <span data-testid="legend-low">{defined ? formatNumber(range[0]) : '—'}</span>
           <span className="legend-bar" style={{ background: cssGradient(info.map) }} />
-          <span data-testid="legend-high">{formatNumber(range[1])}</span>
+          <span data-testid="legend-high">{defined ? formatNumber(range[1]) : '—'}</span>
         </div>
         <p className="status" role="status" data-testid="status">
           {problem !== null ? `Error: ${problem}` : busy ? 'Computing…' : 'Ready'}

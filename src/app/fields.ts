@@ -44,7 +44,7 @@ export const FIELDS: Readonly<Record<FieldId, FieldInfo>> = {
   distance: {
     label: 'Geodesic distance',
     map: 'sequential',
-    note: 'Heat-method distance along the surface from the marked vertices; an approximation, smoothed over about one edge length.',
+    note: 'Heat-method distance along the surface from the marked vertices; an approximation, smoothed over about one edge length. With several sources their values average to zero, so some read slightly below it.',
   },
   eigen: {
     label: 'Laplacian eigenfunction',

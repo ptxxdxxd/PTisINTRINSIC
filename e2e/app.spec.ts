@@ -58,6 +58,30 @@ test('flipping to intrinsic Delaunay removes every non-Delaunay edge', async ({ 
   expect(problems).toEqual([]);
 });
 
+test('a distance or eigenfunction view recomputes for a new surface', async ({ page }) => {
+  test.setTimeout(120_000);
+  const problems = await open(page);
+  const vertices = String(await value(page, 'counts'));
+  await fieldSelect(page).selectOption('eigen');
+  await expect(status(page)).toHaveText('Ready', { timeout: 60_000 });
+  await expect(canvas(page)).toHaveAttribute('data-defined', vertices);
+
+  // Same vertices, new triangulation: the old eigenfunctions no longer apply.
+  await page.getByLabel('Compute on the intrinsic Delaunay triangulation').check();
+  await expect(status(page)).toHaveText('Ready', { timeout: 60_000 });
+  await expect(page.getByTestId('spectrum-summary')).toContainText('eigenvalues in');
+  await expect(canvas(page)).toHaveAttribute('data-defined', vertices);
+
+  await fieldSelect(page).selectOption('distance');
+  await expect(status(page)).toHaveText('Ready');
+  await surfaceSelect(page).selectOption('saddle');
+  await expect(status(page)).toHaveText('Ready');
+  await expect(page.getByTestId('sources')).toContainText(/From vertex \d+\./);
+  const saddle = String(await value(page, 'counts'));
+  await expect(canvas(page)).toHaveAttribute('data-defined', saddle);
+  expect(problems).toEqual([]);
+});
+
 test('clicking the surface inspects a vertex and moves the distance source', async ({ page }) => {
   const problems = await open(page);
   await fieldSelect(page).selectOption('distance');

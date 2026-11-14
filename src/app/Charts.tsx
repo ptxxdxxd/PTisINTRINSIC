@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { weylCount, type SpectrumData } from './model.ts';
 
 const WIDTH = 320;
@@ -27,7 +28,12 @@ const path = (points: readonly (readonly [number, number])[]) =>
 
 const tickLabel = (value: number) => String(Number(value.toPrecision(3)));
 
-function Axes(props: { x: Scale; y: Scale; xLabel: string; xTicks?: readonly [number, string][] }) {
+function Axes(props: {
+  x: Scale;
+  y: Scale;
+  xLabel: string;
+  xTicks?: readonly (readonly [number, ReactNode])[];
+}) {
   const { x, y } = props;
   const bottom = HEIGHT - MARGIN.bottom;
   const xTicks = props.xTicks ?? x.ticks.map((t) => [t, tickLabel(t)] as const);
@@ -97,8 +103,20 @@ export function DimensionChart({ spectrum }: { spectrum: SpectrumData }) {
   const y = linear([0, 2.5], [HEIGHT - MARGIN.bottom, MARGIN.top]);
   const curve = (values: Float64Array) =>
     path(Array.from(values, (d, k) => [x(logs[k]), y(Math.min(2.5, Math.max(0, d)))] as const));
-  const decades: [number, string][] = [];
-  for (let p = Math.ceil(logs[0]); p <= logs[logs.length - 1]; p++) decades.push([p, `10^${p}`]);
+  // Powers of ten as 10 with a raised exponent and a true minus sign.
+  const decades: [number, ReactNode][] = [];
+  for (let p = Math.ceil(logs[0]); p <= logs[logs.length - 1]; p++) {
+    const exponent = p < 0 ? `\u2212${String(-p)}` : String(p);
+    decades.push([
+      p,
+      <>
+        10
+        <tspan dy="-0.45em" fontSize="0.8em">
+          {exponent}
+        </tspan>
+      </>,
+    ]);
+  }
   return (
     <figure>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Spectral dimension">
