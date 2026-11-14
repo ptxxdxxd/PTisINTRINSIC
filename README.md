@@ -10,19 +10,19 @@ against what, and how closely they agree.
 
 ## What it computes
 
-- **Curvature** from angle defects, with the discrete Gauss–Bonnet theorem as a running
-  consistency check.
-- **The cotan Laplacian**, the standard discretization of the Laplace–Beltrami operator.
-- **Intrinsic Delaunay triangulations** by edge flips, which re-route edges across the surface
-  without moving a vertex or changing the surface.
-- **The spectrum** of the Laplacian by a dense symmetric eigensolve, with the eigenvalue counting
+- Curvature from angle defects, with the discrete Gauss–Bonnet theorem as a running consistency
+  check.
+- The cotan Laplacian, the standard discretization of the Laplace–Beltrami operator.
+- Intrinsic Delaunay triangulations by edge flips, which re-route edges across the surface without
+  moving a vertex or changing the surface.
+- The spectrum of the Laplacian by a dense symmetric eigensolve, with the eigenvalue counting
   function against Weyl's law and the spectral dimension of the heat trace.
-- **Geodesic distance** by the heat method, on a sparse Cholesky factorization that is computed
-  once and reused for every source you click.
+- Geodesic distance by the heat method, on a sparse Cholesky factorization that is computed once
+  and reused for every source you click.
 
 "From edge lengths alone" is the point. No computation in `src/core` reads a vertex position;
-positions are only turned into lengths, drawn and exported. One consequence is that the cone preset is the exact
-flat cone, not a polyhedral approximation of one.
+positions are only turned into lengths, drawn and exported. One consequence is that the cone
+preset is the exact flat cone, not a polyhedral approximation of one.
 
 ## How it is checked
 
@@ -59,22 +59,24 @@ Measured by `npm run report`, which writes [docs/results.md](docs/results.md) an
 
 ## Limits
 
-- **Pointwise curvature needs a regular mesh.** On an irregular one it stops converging.
-- **Heat-method distance is an approximation**, smoothed over about one edge length, and it
-  converges slowly: at first order or slower from a general vertex. On coarse or badly shaped meshes
-  a few values can come out slightly negative. Flipping to the intrinsic
-  Delaunay triangulation first helps a great deal; the app has a switch for it.
-- **Very long meshes** (several hundred edges across) need a longer heat step, or the heat
-  underflows; far too long a step evens the heat out. The library reports both as errors instead
-  of returning a wrong distance.
-- **The eigensolver is dense**, so the spectrum is limited to 1,100 vertices.
-- **Edge lengths** must stay well inside the range of doubles, because the triangle formulas
-  multiply four of them. Lengths outside that range are rejected.
-- **Only `src/core` and the app's plain functions have unit tests.** The React components and the
+- Pointwise curvature needs a regular mesh. On an irregular one it stops converging.
+- Heat-method distance is an approximation, smoothed over about one edge length, and it converges
+  slowly: at first order or slower from a general vertex. On coarse or badly shaped meshes a few
+  values can come out slightly negative. Flipping to the intrinsic Delaunay triangulation first
+  helps a great deal; the app has a switch for it.
+- Very long meshes (several hundred edges across) need a longer heat step, or the heat underflows;
+  far too long a step evens the heat out. The library reports both as errors instead of returning
+  a wrong distance.
+- The eigensolver is dense, so the spectrum is limited to 1,100 vertices.
+- Edge lengths must stay well inside the range of doubles, because the triangle formulas multiply
+  four of them. Lengths outside that range are rejected.
+- Only `src/core` and the app's plain functions have unit tests. The React components and the
   viewport are covered by the browser tests, which check what is computed and shown as text, not
   the pixels drawn.
-- **A long computation cannot be cancelled.** A dense eigensolve holds up later requests.
-- **Surfaces are built in.** There is no mesh upload yet.
+- A long computation cannot be cancelled. A dense eigensolve holds up later requests.
+- The surfaces are built in. There is no mesh upload.
+- Picking a vertex needs a pointer. From the keyboard, the distance source can be typed as a
+  vertex number.
 
 ## Run it
 
