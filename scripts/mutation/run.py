@@ -72,7 +72,7 @@ def main() -> int:
         shutil.copytree(ROOT, copy, ignore=SKIP)
         (copy / "node_modules").symlink_to(ROOT / "node_modules")
         if not run(["npx", "vitest", "run"], copy):
-            print("the unit tests fail before any mutation; fix that first")
+            print("the unit tests fail before any mutation; fix that first", file=sys.stderr)
             return 1
 
         for mutant in mutants:

@@ -329,6 +329,6 @@ writeFileSync(
   join(outputDirectory, 'symmetric-matrices.json'),
   JSON.stringify(symmetricMatrices()),
 );
-console.log(
-  `wrote ${meshes.length} meshes, ${needleList.length} needle triangles and the symmetric matrices to ${outputDirectory}`,
+process.stderr.write(
+  `wrote ${meshes.length} meshes, ${needleList.length} needle triangles and the symmetric matrices to ${outputDirectory}\n`,
 );
