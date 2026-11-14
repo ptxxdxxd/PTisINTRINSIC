@@ -7,6 +7,8 @@ interface WorkerScope {
   postMessage(message: ComputeResponse): void;
 }
 
+// The app compiles against the DOM library, where `self` is a Window. The WebWorker library
+// declares the same globals differently and cannot be loaded alongside it.
 const scope = self as unknown as WorkerScope;
 const service = new ComputeService();
 scope.onmessage = (event) => {
