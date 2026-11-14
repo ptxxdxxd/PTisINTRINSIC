@@ -353,11 +353,13 @@ function main(): void {
   const conesOffAxis = [4, 8, 16, 32].map((r) => ({ rings: r, ...coneDistance(r, false) }));
   const spheres = [6, 12, 24, 48].map((r) => ({ rings: r, ...sphereDistance(r, true) }));
   const spheresOffAxis = [6, 12, 24, 48].map((r) => ({ rings: r, ...sphereDistance(r, false) }));
-  /** Smallest and largest order of convergence between successive refinements. */
-  const orders = (errors: number[]) => {
-    const all = errors.slice(1).map((e, k) => order(errors[k], e));
-    return `${fixed(Math.min(...all))} to ${fixed(Math.max(...all))}`;
+  /** "1.98 to 2.04", or "2.00" when both ends round to the same figure. */
+  const span = (values: number[]) => {
+    const [low, high] = [fixed(Math.min(...values)), fixed(Math.max(...values))];
+    return low === high ? low : `${low} to ${high}`;
   };
+  /** Smallest and largest order of convergence between successive refinements. */
+  const orders = (errors: number[]) => span(errors.slice(1).map((e, k) => order(errors[k], e)));
   const jitterStalls = jittered[3] > 0.8 * jittered[2];
   const flats = resolutions.map((n) => ({ n, ...flatDistance(n) }));
   const caps = [16, 32, 64].map((n) => ({ n, ...capDistance(n) }));
@@ -375,7 +377,7 @@ function main(): void {
     `- **Gauss–Bonnet.** The angle defects sum to 2πχ within ${sci(gb.worst)} on ${count(gb.meshes)} random meshes (discs, spheres and tori, before and after edge flips). This checks the connectivity and each triangle's angle sum; the individual angles are checked against libigl and mpmath below.`,
     `- **Curvature.** On a regular grid the pointwise error falls at order ${orders(regular)} (${regular.map(sci).join(', ')} at ${resolutions.join(', ')} cells per side). With 15% vertex jitter it ${jitterStalls ? 'stops falling' : 'still falls'} (${jittered.map(sci).join(', ')}); angle defects are known to converge pointwise only on regular meshes. A cone's apex defect is right to ${sci(apex)}.`,
     `- **Intrinsic Delaunay.** Of ${count(sweep.runs)} random bumps, ${sweep.short} stop short of Delaunay; ${sweep.nonSimplicial} of the ${count(sweep.runs)} need parallel edges or loops to get there. Flipping changes no vertex's curvature by more than ${sci(sweep.curvatureChange)}.`,
-    `- **Spectrum.** The first ten eigenvalues of the unit square converge at order ${fixed(Math.min(...eigenOrders))} to ${fixed(Math.max(...eigenOrders))}; at 24 cells per side the worst is off by ${fixed(100 * Math.max(...eigen[2]), 1)}%.`,
+    `- **Spectrum.** The first ten eigenvalues of the unit square converge at order ${span(eigenOrders)}; at 24 cells per side the worst is off by ${fixed(100 * Math.max(...eigen[2]), 1)}%.`,
     `- **Geodesic distance.** From a cone's apex or a sphere's pole, where the problem is symmetric, the largest error against the exact distance falls at order ${orders(cones.map((c) => c.max))} and ${orders(spheres.map((c) => c.max))}. From a general vertex it falls far more slowly: order ${orders(conesOffAxis.map((c) => c.max))} on the cone (${conesOffAxis.map((c) => sci(c.max)).join(', ')}) and ${orders(spheresOffAxis.map((c) => c.max))} on the sphere (${spheresOffAxis.map((c) => sci(c.max)).join(', ')}). That is how the method behaves with its standard time step, not an implementation defect: the same distances agree with potpourri3d's to the fifth digit.`,
     `- **Reference libraries.** Face areas are bit-identical to libigl's. The stiffness matrix differs from libigl's by ${sci(meshes.stiffnessVsLibigl)} (relative), eigenvalues from LAPACK's by ${sci(meshes.eigenvaluesVsLapack)}, heat-method distances from an independent SciPy implementation by ${sci(geodesics.vsDirectReimplementation)} and from potpourri3d by ${sci(geodesics.vsPotpourri3dLargest)}. That last gap is one line of geometry-central, a 1e-6 shift of the Laplacian: with the same shift the SciPy implementation matches potpourri3d to ${sci(geodesics.potpourri3dVsReimplementationWithShift)}.`,
     `- **Thin triangles.** On ${needles.triangles} needle-shaped triangles, area and angles are within ${fixed(needles.kahanAreaRoundoffs)} and ${fixed(needles.kahanAngleRoundoffs)} units of roundoff of 80-digit arithmetic. The textbook Heron formula is wrong beyond 1e-8 on ${needles['heronWrongBeyond1e-8']} of them.`,

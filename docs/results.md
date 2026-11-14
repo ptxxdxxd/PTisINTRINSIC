@@ -12,7 +12,7 @@ Every number in the README's results section is copied from the summary below. T
 - **Curvature.** On a regular grid the pointwise error falls at order 1.70 to 1.92 (2.4e+0, 7.3e-1, 1.9e-1, 5.2e-2 at 8, 16, 32, 64 cells per side). With 15% vertex jitter it stops falling (2.2e+0, 9.9e-1, 5.2e-1, 5.5e-1); angle defects are known to converge pointwise only on regular meshes. A cone's apex defect is right to 2.2e-16.
 - **Intrinsic Delaunay.** Of 3,000 random bumps, 0 stop short of Delaunay; 20 of the 3,000 need parallel edges or loops to get there. Flipping changes no vertex's curvature by more than 2.7e-15.
 - **Spectrum.** The first ten eigenvalues of the unit square converge at order 1.98 to 2.04; at 24 cells per side the worst is off by 1.4%.
-- **Geodesic distance.** From a cone's apex or a sphere's pole, where the problem is symmetric, the largest error against the exact distance falls at order 2.00 to 2.00 and 1.98 to 2.00. From a general vertex it falls far more slowly: order 0.67 to 0.98 on the cone (1.8e-1, 9.3e-2, 4.8e-2, 3.0e-2) and 0.47 to 0.83 on the sphere (2.4e-1, 1.3e-1, 8.5e-2, 6.1e-2). That is how the method behaves with its standard time step, not an implementation defect: the same distances agree with potpourri3d's to the fifth digit.
+- **Geodesic distance.** From a cone's apex or a sphere's pole, where the problem is symmetric, the largest error against the exact distance falls at order 2.00 and 1.98 to 2.00. From a general vertex it falls far more slowly: order 0.67 to 0.98 on the cone (1.8e-1, 9.3e-2, 4.8e-2, 3.0e-2) and 0.47 to 0.83 on the sphere (2.4e-1, 1.3e-1, 8.5e-2, 6.1e-2). That is how the method behaves with its standard time step, not an implementation defect: the same distances agree with potpourri3d's to the fifth digit.
 - **Reference libraries.** Face areas are bit-identical to libigl's. The stiffness matrix differs from libigl's by 4.0e-16 (relative), eigenvalues from LAPACK's by 1.8e-14, heat-method distances from an independent SciPy implementation by 1.8e-14 and from potpourri3d by 2.0e-5. That last gap is one line of geometry-central, a 1e-6 shift of the Laplacian: with the same shift the SciPy implementation matches potpourri3d to 2.9e-15.
 - **Thin triangles.** On 185 needle-shaped triangles, area and angles are within 1.93 and 2.12 units of roundoff of 80-digit arithmetic. The textbook Heron formula is wrong beyond 1e-8 on 85 of them.
 
@@ -51,9 +51,9 @@ Dense symmetric eigensolver on random matrices:
 
 | Size | Largest residual of A v − λ v | Time   |
 | ---- | ----------------------------- | ------ |
-| 289  | 3.0e-14                       | 0.12 s |
-| 625  | 1.9e-14                       | 1.23 s |
-| 1089 | 8.8e-14                       | 6.24 s |
+| 289  | 3.0e-14                       | 0.11 s |
+| 625  | 1.9e-14                       | 1.01 s |
+| 1089 | 8.8e-14                       | 5.65 s |
 
 ## Heat-method geodesic distance
 
@@ -109,9 +109,9 @@ One backward-Euler heat step from a corner of a 65 × 65 grid (4,225 vertices). 
 
 | Vertices | Numbers in the factor | Factor | Solve  |
 | -------- | --------------------- | ------ | ------ |
-| 1,089    | 25,553                | 2 ms   | 0.2 ms |
-| 4,225    | 189,345               | 19 ms  | 1.3 ms |
-| 16,641   | 1,455,937             | 140 ms | 8.0 ms |
+| 1,089    | 25,553                | 1 ms   | 0.1 ms |
+| 4,225    | 189,345               | 11 ms  | 0.7 ms |
+| 16,641   | 1,455,937             | 134 ms | 7.8 ms |
 
 ## Agreement with reference libraries
 
