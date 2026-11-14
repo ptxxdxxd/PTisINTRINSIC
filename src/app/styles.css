@@ -158,10 +158,12 @@ h2 {
 }
 
 .slider {
-  grid-template-columns: 7.5rem minmax(0, 1fr) 4.6rem;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto;
 }
 
 .slider output {
+  min-width: 2.6rem;
+  white-space: nowrap;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-size: 0.85rem;

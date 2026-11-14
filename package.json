@@ -21,8 +21,11 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run build",
-    "fixtures": "node scripts/export-fixtures.ts"
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run docs:check && npm run build",
+    "fixtures": "node scripts/export-fixtures.ts",
+    "report": "node scripts/report.ts",
+    "mutation": "python3 scripts/mutation/run.py",
+    "docs:check": "node scripts/check-docs.ts"
   },
   "dependencies": {
     "react": "19.3.1",

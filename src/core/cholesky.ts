@@ -12,8 +12,8 @@
  * numbers.
  *
  * A. George and J. W. H. Liu, "Computer Solution of Large Sparse Positive
- * Definite Systems", Prentice-Hall 1981, chapter 4 (the ordering and the
- * envelope method).
+ * Definite Systems", Prentice-Hall 1981 (the ordering, the search for a
+ * starting node and the envelope method).
  */
 import type { CsrMatrix } from './sparse.ts';
 

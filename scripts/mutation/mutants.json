@@ -1,0 +1,318 @@
+[
+  {
+    "file": "src/core/delaunay.ts",
+    "find": "(ik - il) * (ik - il)",
+    "replace": "(ik + il) * (ik - il)",
+    "label": "flipped length formula"
+  },
+  {
+    "file": "src/core/laplacian.ts",
+    "find": "weights[mesh.halfedgeEdge[nextHalfedge(h)]] += cot[h] / 2;",
+    "replace": "weights[mesh.halfedgeEdge[h]] += cot[h] / 2;",
+    "label": "cot weight assigned to the wrong edge"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "      if (t !== -1) twin[t] = m.to;\n",
+    "replace": "",
+    "label": "flip forgets to repoint outer twins"
+  },
+  {
+    "file": "src/core/delaunay.ts",
+    "find": "weights[e] < -DELAUNAY_TOLERANCE) result.push(e);",
+    "replace": "weights[e] < 0) result.push(e);",
+    "label": "no tolerance when listing non-Delaunay edges"
+  },
+  {
+    "file": "src/core/delaunay.ts",
+    "find": "edgeWeight(mesh, lengths, e) >= -DELAUNAY_TOLERANCE) continue;",
+    "replace": "edgeWeight(mesh, lengths, e) >= DELAUNAY_TOLERANCE) continue;",
+    "label": "loop also flips edges of weight ~0",
+    "equivalent": "behaves identically in every case"
+  },
+  {
+    "file": "src/core/solvers.ts",
+    "find": "      z[i] = inverseDiagonal[i] * r[i];\n    }",
+    "replace": "      z[i] = r[i];\n    }",
+    "label": "preconditioner not applied inside the loop"
+  },
+  {
+    "file": "src/core/sparse.ts",
+    "find": "          outValue[nonzeros - 1] += value[t];",
+    "replace": "          outValue[nonzeros - 1] = value[t];",
+    "label": "duplicates overwritten instead of summed"
+  },
+  {
+    "file": "src/core/geometry.ts",
+    "find": "areas[vertex[3 * f + c]] += obtuse[c] ? area / 2 : area / 4;",
+    "replace": "areas[vertex[3 * f + c]] += area / 3;",
+    "label": "mixed area ignores the obtuse rule"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "        if (p < 0) r = -r;\n",
+    "replace": "",
+    "label": "shift sign choice dropped"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "      if (f > 0) g = -g;\n",
+    "replace": "",
+    "label": "Householder sign choice dropped"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "      for (let j = 0; j < i; j++) e[j] -= hh * d[j];",
+    "replace": "      for (let j = 0; j < i; j++) e[j] += hh * d[j];",
+    "label": "Householder update sign"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "            w[row + k] = c * w[row + k] - s * h;",
+    "replace": "            w[row + k] = c * w[row + k] + s * h;",
+    "label": "rotation accumulation sign"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "      if (d[j] < p) {",
+    "replace": "      if (d[j] > p) {",
+    "label": "sort order reversed"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "        for (let k = 0; k <= i; k++) w[j * n + k] -= g * d[k];",
+    "replace": "        for (let k = 0; k < i; k++) w[j * n + k] -= g * d[k];",
+    "label": "accumulation off by one"
+  },
+  {
+    "file": "src/core/spectrum.ts",
+    "find": "    for (let i = 0; i < n; i++) vectors[k * n + i] *= scale[i];",
+    "replace": "",
+    "label": "eigenvectors not mapped back by M^-1/2"
+  },
+  {
+    "file": "src/core/spectrum.ts",
+    "find": "    scale[i] = 1 / Math.sqrt(mass[i]);",
+    "replace": "    scale[i] = 1 / mass[i];",
+    "label": "mass scaling without square root"
+  },
+  {
+    "file": "src/core/spectrum.ts",
+    "find": "  return (2 * t * weighted) / z;",
+    "replace": "  return (t * weighted) / z;",
+    "label": "spectral dimension factor 2"
+  },
+  {
+    "file": "src/core/spectrum.ts",
+    "find": "      const term = 2 * Math.exp((-k * k * side * side) / t);",
+    "replace": "      const term = Math.exp((-k * k * side * side) / t);",
+    "label": "theta transformation factor 2"
+  },
+  {
+    "file": "src/core/spectrum.ts",
+    "find": "  if (x >= 1) {",
+    "replace": "  if (x >= 0.01) {",
+    "label": "series switch point",
+    "equivalent": "both series are exact"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "      const t = m.twin === -1 ? -1 : (movedTo.get(m.twin) ?? m.twin);",
+    "replace": "      const t = m.twin;",
+    "label": "flip: twins inside the quad not remapped"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "    for (const v of new Set([i, j, k, l])) {",
+    "replace": "    for (const v of [i, j, k, l]) {",
+    "label": "flip: repeated corner repointed twice"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "    if (h1 === -1 || halfedgeFace(h0) === halfedgeFace(h1)) return false;",
+    "replace": "    if (h1 === -1) return false;",
+    "label": "flip: same-face edge not refused"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "result.length < this.halfedgeVertex.length);",
+    "replace": "result.length <= this.faceCount);",
+    "label": "fan walk: old corner bound"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "      if (t === h || this.halfedgeTwin[t] !== h) fail(",
+    "replace": "      if (false) fail(",
+    "label": "validator: twin symmetry check dropped"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "        fail(`halfedge ${h} and its twin do not run in opposite directions`);",
+    "replace": "",
+    "label": "validator: direction check dropped"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "      if (halfedgesPerEdge[e] !== expected) fail(",
+    "replace": "      if (false) fail(",
+    "label": "validator: halfedge count check dropped"
+  },
+  {
+    "file": "src/core/mesh.ts",
+    "find": "        fail(`the faces around vertex ${v} do not form a single fan`);",
+    "replace": "",
+    "label": "validator: fan check dropped"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "  for (let l = 0; l < n; l++) tst1 = Math.max(tst1, Math.abs(d[l]) + Math.abs(e[l]));\n  const eps = 2 ** -52;\n  for (let l = 0; l < n; l++) {\n",
+    "replace": "  const eps = 2 ** -52;\n  for (let l = 0; l < n; l++) {\n    tst1 = Math.max(tst1, Math.abs(d[l]) + Math.abs(e[l]));\n",
+    "label": "eigen: JAMA running deflation threshold restored"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "  const exponent = largest === 0 ? 0 : Math.floor(Math.log2(largest));",
+    "replace": "  const exponent = 0;",
+    "label": "eigen: prescaling removed"
+  },
+  {
+    "file": "src/core/eigen.ts",
+    "find": "  let y = x;\n",
+    "replace": "  if (Math.abs(k) > 0) return x * 2 ** k;\n  let y = x;\n",
+    "label": "eigen: power of two applied in one step"
+  },
+  {
+    "file": "src/core/delaunay.ts",
+    "find": "    if (!mesh.flipEdge(e)) throw new Error(`non-Delaunay edge ${e} could not be flipped`);",
+    "replace": "    if (!mesh.flipEdge(e)) continue;",
+    "label": "delaunay: unflippable edge skipped",
+    "equivalent": "unreachable"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "for (let m = Math.max(fk, fj); m < j; m++) sum -=",
+    "replace": "for (let m = Math.max(fk, fj) + 1; m < j; m++) sum -=",
+    "label": "cholesky: inner product skips its first term"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "values[rk + j] = sum / values[rj + j];",
+    "replace": "values[rk + j] = sum;",
+    "label": "cholesky: off-diagonal not divided by the pivot"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "if (!(pivot > 0)) {",
+    "replace": "if (Number.isNaN(pivot)) {",
+    "label": "cholesky: non-positive pivots accepted"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "<= SYMMETRY_TOLERANCE * scale)) {",
+    "replace": "<= 1e-2 * scale)) {",
+    "label": "cholesky: symmetry check loosened to 1%"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "y[m] -= values[rk + m] * z;",
+    "replace": "y[m] += values[rk + m] * z;",
+    "label": "cholesky: back substitution sign"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "return result.reverse();",
+    "replace": "return result;",
+    "label": "ordering: Cuthill-McKee without the reversal"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "order.push(...order.splice(from).sort(byDegree));",
+    "replace": "order.push(...order.splice(from));",
+    "label": "ordering: neighbours not sorted by degree"
+  },
+  {
+    "file": "src/core/cholesky.ts",
+    "find": "root = order.slice(lastLevel).sort(byDegree)[0];",
+    "replace": "break;",
+    "label": "ordering: no search for a peripheral start"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "this.time = coefficient * meanLength * meanLength;",
+    "replace": "this.time = coefficient * meanLength;",
+    "label": "heat: time step not squared"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "vertexAreas(mesh, lengths, 'barycentric')",
+    "replace": "vertexAreas(mesh, lengths, 'mixed')",
+    "label": "heat: mixed instead of barycentric mass",
+    "check": "oracle"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "(side[1] * side[1] + base * base - side[0] * side[0]) / (2 * base)",
+    "replace": "(side[0] * side[0] + base * base - side[1] * side[1]) / (2 * base)",
+    "label": "heat: face layout mirrored"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "if (delta[v] === 0) count++;",
+    "replace": "count++;",
+    "label": "heat: duplicate sources counted twice"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "if (count === n) return new Float64Array(n);",
+    "replace": "",
+    "label": "heat: all-sources shortcut removed"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": ">= SMALLEST_NORMAL)) lost++;",
+    "replace": ">= 0)) lost++;",
+    "label": "heat: underflow check removed"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "phi[v] -= shift;",
+    "replace": "phi[v] -= 0;",
+    "label": "heat: result not shifted to the sources"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "if (scale <= FLAT_FACE_TOLERANCE * size) continue;",
+    "replace": "if (scale === 0) continue;",
+    "label": "heat: flat-face cutoff only at exact zero"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "const gy = (d2 - gx * layout[3 * f + 1]) / layout[3 * f + 2];",
+    "replace": "const gy = d2 / layout[3 * f + 2];",
+    "label": "heat: gradient ignores the apex offset"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "result[v0] += c2 * d1 + c1 * d2;",
+    "replace": "result[v0] += c1 * d1 + c2 * d2;",
+    "label": "heat: cotangents swapped in the divergence"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "result[v1] += -c2 * d1 + c0 * (d2 - d1);",
+    "replace": "result[v1] += -c2 * d1 + c0 * (d1 - d2);",
+    "label": "heat: divergence sign at corner 1"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "result[v2] += -c1 * d2 + c0 * (d1 - d2);",
+    "replace": "result[v2] += -c1 * d2;",
+    "label": "heat: divergence term dropped at corner 2"
+  },
+  {
+    "file": "src/core/geodesics.ts",
+    "find": "if (components !== 1) {",
+    "replace": "if (components < 1) {",
+    "label": "heat: disconnected meshes accepted"
+  }
+]

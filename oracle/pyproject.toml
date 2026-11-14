@@ -11,7 +11,7 @@ select = ["E", "W", "F", "I", "UP", "B", "SIM", "NPY", "PT", "RUF"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["tests"]
+files = ["tests", "measure_agreement.py"]
 
 [[tool.mypy.overrides]]
 module = ["igl", "igl.*", "potpourri3d", "potpourri3d.*", "meshio", "meshio.*", "scipy", "scipy.*", "mpmath", "mpmath.*"]

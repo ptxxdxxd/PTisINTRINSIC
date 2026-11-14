@@ -107,8 +107,8 @@ export function DimensionChart({ spectrum }: { spectrum: SpectrumData }) {
       </svg>
       <figcaption>
         Spectral dimension −2 d ln Z / d ln t of the heat trace Z(t) = Σ exp(−λt), from the computed
-        eigenvalues and nothing else. It nears 2 only in between: at small t the mesh has too few
-        modes, at large t the surface&rsquo;s finite size takes over.
+        eigenvalues and nothing else. It is near 2 only in a middle range: at small t the mesh
+        departs from the continuum, at large t the surface&rsquo;s finite size takes over.
         {exactDimension !== null && ' Dashed: the exact curve for the continuous square.'}
       </figcaption>
     </figure>
