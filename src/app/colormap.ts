@@ -29,7 +29,8 @@ const WARM: Rgb = [0.71, 0.02, 0.15];
 /** Blue through light grey to red, for signed quantities centred on zero. */
 function diverging(t: number): Rgb {
   const [from, to, s] = t < 0.5 ? [COOL, MIDDLE, 2 * t] : [MIDDLE, WARM, 2 * t - 1];
-  return [0, 1, 2].map((c) => from[c] + (to[c] - from[c]) * s) as unknown as Rgb;
+  const mix = (c: 0 | 1 | 2) => from[c] + (to[c] - from[c]) * s;
+  return [mix(0), mix(1), mix(2)];
 }
 
 export function colorAt(map: ColorMapName, t: number): Rgb {
