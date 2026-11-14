@@ -15,6 +15,7 @@ export {
   vertexAreas,
   type VertexAreaScheme,
 } from './geometry.ts';
+export { toCsv, toObj, toVtk, type ExportField, type ExportMesh } from './exporters.ts';
 export { HeatMethod, type HeatMethodOptions } from './geodesics.ts';
 export { cornerCotangents, cotanLaplacian, cotanWeights } from './laplacian.ts';
 export { symmetricEigen, type SymmetricEigen, type SymmetricEigenOptions } from './eigen.ts';

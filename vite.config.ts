@@ -9,13 +9,17 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    // The viewport chunk is three.js: 560 kB minified, 139 kB gzipped. It is
+    // loaded after first paint.
+    chunkSizeWarningLimit: 600,
   },
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     coverage: {
       provider: 'v8',
-      include: ['src/core/**/*.ts'],
+      // The numerical core, and the parts of the app that are plain functions.
+      include: ['src/core/**/*.ts', 'src/app/{model,protocol,fields,colormap}.ts'],
       reporter: ['text', 'html', 'json-summary'],
       thresholds: { lines: 95, statements: 95, functions: 95, branches: 90 },
     },

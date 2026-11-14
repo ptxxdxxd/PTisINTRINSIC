@@ -21,6 +21,7 @@ import {
   faceAreas,
   faceEdgeLengths,
   gaussianBump,
+  gaussianCurvature,
   intrinsicDelaunay,
   laplacianSpectrum,
   mulberry32,
@@ -28,6 +29,9 @@ import {
   saddle,
   sphericalCap,
   symmetricEigen,
+  toCsv,
+  toObj,
+  toVtk,
   triangleAngle,
   triangleArea,
   vertexAreas,
@@ -284,6 +288,41 @@ mkdirSync(outputDirectory, { recursive: true });
 for (const fixture of meshes) {
   writeFileSync(join(outputDirectory, `${fixture.name}.json`), JSON.stringify(fixture));
 }
+// The app's export formats, written with the same functions it calls, for
+// meshio to read back. Curvature is NaN on the boundary, which exercises the
+// formats' handling of undefined values.
+const exportDirectory = join(outputDirectory, 'exports');
+mkdirSync(exportDirectory, { recursive: true });
+for (const [name, s] of [
+  ['bump', gaussianBump({ resolution: 12, jitter: 0.1, seed: 4, height: 0.5, width: 0.4 })],
+  ['cone', cone({ deficit: 2, rings: 5, sectors: 9 })],
+] as const) {
+  const defect = vertexCurvature(s.mesh, cornerAngles(s.mesh, s.lengths));
+  const fields = [
+    {
+      name: 'gaussian curvature',
+      values: gaussianCurvature(s.mesh, defect, vertexAreas(s.mesh, s.lengths, 'mixed')),
+    },
+    { name: 'geodesic_distance', values: new HeatMethod(s.mesh, s.lengths).distance([3]) },
+  ];
+  const mesh = { positions: s.positions, faces: s.mesh.halfedgeVertex };
+  writeFileSync(join(exportDirectory, `${name}.vtk`), toVtk(mesh, fields, `Intrinsic ${name}`));
+  writeFileSync(join(exportDirectory, `${name}.obj`), toObj(mesh, `Intrinsic ${name}`));
+  writeFileSync(join(exportDirectory, `${name}.csv`), toCsv(mesh, fields));
+  writeFileSync(
+    join(exportDirectory, `${name}.json`),
+    JSON.stringify({
+      positions: Array.from(s.positions),
+      faces: Array.from(s.mesh.halfedgeVertex),
+      // JSON has no NaN; null marks it.
+      fields: fields.map((f) => ({
+        name: f.name,
+        values: Array.from(f.values, (x) => (Number.isNaN(x) ? null : x)),
+      })),
+    }),
+  );
+}
+
 const needleList = needles();
 writeFileSync(join(outputDirectory, 'needles.json'), JSON.stringify(needleList));
 writeFileSync(

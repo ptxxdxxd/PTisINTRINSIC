@@ -81,6 +81,7 @@ def _read(path: Path) -> Any:
 
 def mesh_fixtures() -> list[MeshFixture]:
     fixtures = []
+    # Top level only: the exports directory holds files in other formats.
     for path in sorted(FIXTURE_DIRECTORY.glob("*.json")):
         if path.name in ("needles.json", "symmetric-matrices.json"):
             continue
