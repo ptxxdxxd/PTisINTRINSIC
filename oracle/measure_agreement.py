@@ -1,4 +1,4 @@
-"""Measures how closely Intrinsic agrees with the reference libraries.
+"""Measures how closely PTisINTRINSIC agrees with the reference libraries.
 
 The tests in tests/ assert that each difference is below a tolerance. This
 script reports the differences themselves, as JSON, for `npm run report` to

@@ -6,6 +6,7 @@ import { FIELDS, contourStep, fieldRange, type FieldId } from './fields.ts';
 import { download, formatNumber } from './format.ts';
 import { PRESETS, type SpectrumData, type SurfaceSpec, type Triangulation } from './model.ts';
 import { Inspector, Readouts, SpectrumPanel, SurfaceControls } from './Panels.tsx';
+import { AUTHOR, STAMP } from './signature.ts';
 import type { Built } from './protocol.ts';
 
 interface Job {
@@ -155,12 +156,12 @@ export function App() {
   };
   // Named after the surface that was built, which lags the controls while a new one computes.
   const shown = result?.job.spec.kind ?? job.spec.kind;
-  const title = `Intrinsic: ${PRESETS[shown].label}, ${built?.summary.vertices ?? 0} vertices`;
+  const title = `PTisINTRINSIC: ${PRESETS[shown].label}, ${built?.summary.vertices ?? 0} vertices`;
 
   return (
     <div className="app">
       <header className="masthead">
-        <h1>Intrinsic</h1>
+        <h1>PTisINTRINSIC</h1>
         <p>
           Curvature, the Laplacian, its spectrum and geodesic distance on a triangle mesh, computed
           from edge lengths alone and checked against exact answers.
@@ -366,6 +367,11 @@ export function App() {
             SciPy and mpmath; the repository says which is checked against what, and how closely.
           </p>
         </section>
+
+        <footer className="signature">
+          <pre aria-hidden="true">{STAMP}</pre>
+          <span className="visually-hidden">Made by {AUTHOR}</span>
+        </footer>
       </aside>
     </div>
   );

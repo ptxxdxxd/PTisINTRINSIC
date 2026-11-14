@@ -105,7 +105,7 @@ test('exports download files with the mesh on screen', async ({ page }) => {
   };
   const vtk = await save('VTK');
   expect(
-    vtk.startsWith('# vtk DataFile Version 3.0\nIntrinsic: Gaussian bump, 625 vertices\n'),
+    vtk.startsWith('# vtk DataFile Version 3.0\nPTisINTRINSIC: Gaussian bump, 625 vertices\n'),
   ).toBe(true);
   expect(vtk).toContain(`POINTS ${vertices} double`);
   expect(vtk).toContain('SCALARS gaussian_curvature double 1');
@@ -132,5 +132,7 @@ test('the page fits its window', async ({ page }) => {
   expect(box.y + box.height).toBeLessThanOrEqual(window.height);
   expect(box.width).toBeGreaterThan(0.6 * window.width - 400);
   expect(box.height).toBeGreaterThan(300);
+  // The author's stamp sits at the end of the panel.
+  await expect(page.locator('footer.signature pre')).toHaveText(/PTisDEV/);
   expect(problems).toEqual([]);
 });

@@ -1,4 +1,4 @@
-"""Intrinsic's heat-method geodesic distance against scipy and potpourri3d.
+"""PTisINTRINSIC's heat-method geodesic distance against scipy and potpourri3d.
 
 Two references:
 
@@ -11,12 +11,12 @@ Two references:
 geometry-central solves its Poisson problem with L + 1e-6 I instead of the
 singular L (heat_method_distance.cpp). That changes the distance in the fifth
 digit. The re-implementation takes the shift as a parameter: with the shift it
-reproduces potpourri3d, without it Intrinsic. So the difference between
-Intrinsic and potpourri3d is that shift and nothing else.
+reproduces potpourri3d, without it PTisINTRINSIC. So the difference between
+PTisINTRINSIC and potpourri3d is that shift and nothing else.
 
 Measured on 2026-11-13 over 14 cases (10 on embedded meshes), relative to the
-largest distance: Intrinsic against the re-implementation 1.9e-14; potpourri3d
-against the re-implementation with the shift 2.9e-15; Intrinsic against
+largest distance: PTisINTRINSIC against the re-implementation 1.9e-14; potpourri3d
+against the re-implementation with the shift 2.9e-15; PTisINTRINSIC against
 potpourri3d between 8.4e-6 and 2.0e-5. The tolerances below sit above those.
 """
 

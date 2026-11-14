@@ -51,9 +51,9 @@ Dense symmetric eigensolver on random matrices:
 
 | Size | Largest residual of A v − λ v | Time   |
 | ---- | ----------------------------- | ------ |
-| 289  | 3.0e-14                       | 0.12 s |
-| 625  | 1.9e-14                       | 1.19 s |
-| 1089 | 8.8e-14                       | 6.14 s |
+| 289  | 3.0e-14                       | 0.17 s |
+| 625  | 1.9e-14                       | 1.14 s |
+| 1089 | 8.8e-14                       | 6.13 s |
 
 ## Heat-method geodesic distance
 
@@ -110,8 +110,8 @@ One backward-Euler heat step from a corner of a 65 × 65 grid (4,225 vertices). 
 | Vertices | Numbers in the factor | Factor | Solve  |
 | -------- | --------------------- | ------ | ------ |
 | 1,089    | 25,553                | 1 ms   | 0.1 ms |
-| 4,225    | 189,345               | 11 ms  | 0.8 ms |
-| 16,641   | 1,455,937             | 138 ms | 7.5 ms |
+| 4,225    | 189,345               | 12 ms  | 0.8 ms |
+| 16,641   | 1,455,937             | 135 ms | 6.9 ms |
 
 ## Agreement with reference libraries
 

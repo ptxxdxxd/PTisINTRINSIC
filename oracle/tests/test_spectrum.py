@@ -1,4 +1,4 @@
-"""Intrinsic's dense symmetric eigensolver and mesh spectra against LAPACK
+"""PTisINTRINSIC's dense symmetric eigensolver and mesh spectra against LAPACK
 (numpy.linalg.eigh, scipy.linalg.eigh) and ARPACK (scipy.sparse.linalg.eigsh).
 
 Measured on 2026-11-12: random symmetric matrices up to n = 150, eigenvalues
@@ -46,7 +46,7 @@ def test_eigenvectors_are_orthonormal_and_satisfy_the_equation(case: SymmetricCa
 
 
 def pencil(mesh: MeshFixture) -> tuple[sp.csc_matrix, sp.csc_matrix]:
-    """Stiffness and barycentric mass from libigl, assembled independently of Intrinsic."""
+    """Stiffness and barycentric mass from libigl, assembled independently of PTisINTRINSIC."""
     stiffness = -igl.cotmatrix_intrinsic(mesh.face_edge_lengths, mesh.faces)
     mass = igl.massmatrix_intrinsic(
         mesh.face_edge_lengths, mesh.faces, igl.MASSMATRIX_TYPE_BARYCENTRIC

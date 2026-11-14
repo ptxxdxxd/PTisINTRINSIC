@@ -1,6 +1,6 @@
 """Pin down the conventions of the reference libraries.
 
-The differential tests compare Intrinsic against libigl and potpourri3d. These
+The differential tests compare PTisINTRINSIC against libigl and potpourri3d. These
 tests record the sign and boundary conventions those comparisons rely on, so a
 change in a library shows up here rather than as a confusing mismatch later.
 """

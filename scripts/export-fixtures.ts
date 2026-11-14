@@ -1,5 +1,5 @@
 /**
- * Writes oracle/fixtures/*.json: meshes and Intrinsic's results on them, for
+ * Writes oracle/fixtures/*.json: meshes and PTisINTRINSIC's results on them, for
  * the Python suite to recompute with libigl, potpourri3d, scipy and mpmath.
  *
  * Usage: node scripts/export-fixtures.ts
@@ -93,7 +93,7 @@ function spectrumOf(stiffness: CsrMatrix, mass: Float64Array, count: number) {
   };
 }
 
-/** Random symmetric matrices of assorted sizes, with Intrinsic's eigen-decomposition. */
+/** Random symmetric matrices of assorted sizes, with PTisINTRINSIC's eigen-decomposition. */
 function symmetricMatrices() {
   const random = mulberry32(31337);
   return [1, 2, 3, 5, 10, 20, 40, 80, 150].map((n) => {
@@ -306,8 +306,8 @@ for (const [name, s] of [
     { name: 'geodesic_distance', values: new HeatMethod(s.mesh, s.lengths).distance([3]) },
   ];
   const mesh = { positions: s.positions, faces: s.mesh.halfedgeVertex };
-  writeFileSync(join(exportDirectory, `${name}.vtk`), toVtk(mesh, fields, `Intrinsic ${name}`));
-  writeFileSync(join(exportDirectory, `${name}.obj`), toObj(mesh, `Intrinsic ${name}`));
+  writeFileSync(join(exportDirectory, `${name}.vtk`), toVtk(mesh, fields, `PTisINTRINSIC ${name}`));
+  writeFileSync(join(exportDirectory, `${name}.obj`), toObj(mesh, `PTisINTRINSIC ${name}`));
   writeFileSync(join(exportDirectory, `${name}.csv`), toCsv(mesh, fields));
   writeFileSync(
     join(exportDirectory, `${name}.json`),

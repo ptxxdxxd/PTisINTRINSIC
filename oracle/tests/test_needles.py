@@ -1,6 +1,6 @@
 """Needle-shaped triangles against 80-digit arithmetic.
 
-The inputs are the exact binary64 values Intrinsic used, so the reference is
+The inputs are the exact binary64 values PTisINTRINSIC used, so the reference is
 the exact area and angles of that triangle, not of the decimal numbers it was
 generated from. Kahan's formulas promise a few units of roundoff; the measured
 worst cases on 2026-11-12 were 1.93 (area) and 2.12 (angle) units.

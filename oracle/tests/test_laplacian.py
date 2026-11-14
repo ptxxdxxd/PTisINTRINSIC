@@ -1,4 +1,4 @@
-"""Intrinsic's cotan Laplacian, intrinsic Delaunay flips and conjugate-gradient
+"""PTisINTRINSIC's cotan Laplacian, intrinsic Delaunay flips and conjugate-gradient
 solves against libigl and scipy.
 
 Measured agreement on 2026-11-12, relative to the largest Laplacian entry:

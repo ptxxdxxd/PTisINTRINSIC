@@ -1,4 +1,4 @@
-# Intrinsic
+# PTisINTRINSIC
 
 A browser lab for the geometry of triangle meshes, computed from edge lengths alone: curvature,
 the Laplacian and its spectrum, intrinsic Delaunay triangulations and geodesic distance. Every
@@ -121,3 +121,11 @@ npm run mutation -- --python oracle/.venv/bin/python
 ## Licence
 
 Apache-2.0. See [LICENSE](LICENSE).
+
+---
+
+```text
+ .-.
+(o o)  PTisDEV
+ |=|
+```

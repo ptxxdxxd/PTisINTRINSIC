@@ -1,4 +1,4 @@
-"""Intrinsic's areas, angles and curvature against libigl and mpmath.
+"""PTisINTRINSIC's areas, angles and curvature against libigl and mpmath.
 
 Tolerances are a little above the agreement measured on 2026-11-12: edge
 lengths 5.6e-17, face areas 7e-18, corner angles 6.7e-16, interior angle

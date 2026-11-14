@@ -65,7 +65,7 @@ function identifier(name: string): string {
 export function toVtk(mesh: ExportMesh, fields: readonly ExportField[], title: string): string {
   const { n, m } = checked(mesh, fields);
   // The title is the file's second line: one line, at most 256 characters.
-  const header = title.replace(/\s+/g, ' ').trim().slice(0, 255) || 'Intrinsic mesh';
+  const header = title.replace(/\s+/g, ' ').trim().slice(0, 255) || 'Untitled mesh';
   const lines = ['# vtk DataFile Version 3.0', header, 'ASCII', 'DATASET UNSTRUCTURED_GRID'];
   lines.push(`POINTS ${n} double`);
   for (let v = 0; v < n; v++) {

@@ -86,7 +86,7 @@ describe('export validation', () => {
     const infinite = [{ name: 'd', values: [0, Infinity, 0, 0] }];
     expect(() => toVtk(mesh, infinite, 't')).toThrow(/contains Infinity/);
     expect(() => toCsv(mesh, infinite)).toThrow(/contains Infinity/);
-    expect(toVtk(mesh, [], '  ').split('\n')[1]).toBe('Intrinsic mesh');
+    expect(toVtk(mesh, [], '  ').split('\n')[1]).toBe('Untitled mesh');
     const zeros = [0, 0, 0, 0];
     expect(() => toCsv(mesh, [{ name: ' ', values: zeros }])).toThrow(/empty or used twice/);
     expect(() =>
