@@ -250,8 +250,8 @@
   },
   {
     "file": "src/core/geodesics.ts",
-    "find": "(side[1] * side[1] + base * base - side[0] * side[0]) / (2 * base)",
-    "replace": "(side[0] * side[0] + base * base - side[1] * side[1]) / (2 * base)",
+    "find": "cosineNumerator(side[0], side[1], base) / (2 * base)",
+    "replace": "cosineNumerator(side[1], side[0], base) / (2 * base)",
     "label": "heat: face layout mirrored"
   },
   {
