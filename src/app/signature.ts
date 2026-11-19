@@ -7,4 +7,12 @@ export const AUTHOR = 'PTisDEV';
 
 export const CREDIT = 'made with my partner Claude';
 
-export const STAMP = [' .-.', `(o o)  ${AUTHOR}`, ` |=|   ${CREDIT}`].join('\n');
+export const STAMP = [
+  "    .-'''/''-.",
+  "  .'    /    '.",
+  ' /  .-.   .-.  \\',
+  `|  (   ) (   )  |  ${AUTHOR}`,
+  `|   '-' ^ '-'   |  ${CREDIT}`,
+  " \\  ,|'|'|'|.  /",
+  "  '-'-'-'-'-'-'",
+].join('\n');
