@@ -10,7 +10,7 @@ import {
   weylCount,
   type SurfaceKind,
 } from '../../src/app/model.ts';
-import { ComputeService } from '../../src/app/protocol.ts';
+import { ComputeService, parseRequest } from '../../src/app/protocol.ts';
 import {
   cotanLaplacian,
   laplacianSpectrum,
@@ -207,6 +207,67 @@ describe('ComputeService', () => {
       triangulation: 'input',
     });
     expect(invalid.type === 'error' && invalid.message).toMatch(/radius must be/);
+  });
+
+  it('answers a malformed request with an error under its id, or -1 without one', () => {
+    const service = new ComputeService();
+    expect(service.handle({ id: 7, type: 'paint' })).toEqual({
+      id: 7,
+      type: 'error',
+      message: 'request.type must be "build", "distance" or "spectrum", got "paint"',
+    });
+    expect(service.handle('build')).toEqual({
+      id: -1,
+      type: 'error',
+      message: 'request must be an object, got "build"',
+    });
+  });
+});
+
+describe('parseRequest', () => {
+  const build = (spec: unknown, triangulation: unknown = 'input') => ({
+    id: 1,
+    type: 'build',
+    spec,
+    triangulation,
+  });
+  const bumpWithoutHeight = { kind: 'bump', resolution: 8, jitter: 0, seed: 1, width: 0.45 };
+
+  it.each([
+    [null, 'request must be an object, got null'],
+    [[1], 'request must be an object, got an array'],
+    [{ id: '1', type: 'spectrum' }, 'request.id must be an integer, got "1"'],
+    [{ id: 1.5, type: 'spectrum' }, 'request.id must be an integer, got 1.5'],
+    [{ id: 1, type: 'toString' }, 'request.type must be "build", "distance" or "spectrum"'],
+    [build({ kind: 'torus' }), 'request.spec.kind must be plane, bump, saddle, cap or cone'],
+    [build('bump'), 'request.spec must be an object, got "bump"'],
+    [build({ ...small('bump'), resolution: '8' }), 'request.spec.resolution must be a number'],
+    [build(bumpWithoutHeight), 'request.spec.height must be a number, got undefined'],
+    [build(small('bump'), 'flipped'), 'request.triangulation must be "input" or "delaunay"'],
+    [{ id: 1, type: 'distance', sources: [0, '1'] }, 'request.sources must be an array of numbers'],
+    [{ id: 1, type: 'distance', sources: 0 }, 'request.sources must be an array of numbers'],
+  ])('rejects %j: %s', (message, error) => {
+    expect(() => parseRequest(message)).toThrow(error);
+  });
+
+  it("reads only the message's own fields, not inherited ones", () => {
+    const inherited: unknown = Object.create({ id: 1, type: 'spectrum' });
+    expect(() => parseRequest(inherited)).toThrow('request.id must be an integer, got undefined');
+  });
+
+  it('keeps only the fields a request uses, so a __proto__ key changes nothing', () => {
+    const spec = small('bump');
+    // JSON.parse makes "__proto__" an ordinary own key, as a structured clone of such an object would.
+    const message: unknown = JSON.parse(
+      `{"__proto__":{"polluted":true},"extra":1,"id":9,"type":"build","triangulation":"input",` +
+        `"spec":{"__proto__":{"polluted":true},"note":"x",${JSON.stringify(spec).slice(1)}}`,
+    );
+    const request = parseRequest(message);
+    expect(request).toEqual({ id: 9, type: 'build', triangulation: 'input', spec });
+    expect(Object.keys(request).sort()).toEqual(['id', 'spec', 'triangulation', 'type']);
+    expect(Object.getPrototypeOf(request)).toBe(Object.prototype);
+    expect(request.type === 'build' && Object.getPrototypeOf(request.spec)).toBe(Object.prototype);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 });
 
