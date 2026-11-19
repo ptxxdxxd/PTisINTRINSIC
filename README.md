@@ -1,5 +1,7 @@
 # PTisINTRINSIC
 
+[![CI](https://github.com/ptxxdxxd/PTisINTRINSIC/actions/workflows/ci.yml/badge.svg)](https://github.com/ptxxdxxd/PTisINTRINSIC/actions/workflows/ci.yml)
+
 A browser lab for the geometry of triangle meshes, computed from edge lengths alone: curvature,
 the Laplacian and its spectrum, intrinsic Delaunay triangulations and geodesic distance. Every
 number on screen is computed in your browser. The methods are tested against closed-form answers
