@@ -14,7 +14,7 @@ import {
   SurfaceControls,
 } from './Panels.tsx';
 import type { Built } from './protocol.ts';
-import { AUTHOR, STAMP } from './signature.ts';
+import { AUTHOR, CREDIT, STAMP } from './signature.ts';
 
 // three.js is most of the download; load it after the page and its numbers are up.
 const Viewport = lazy(() => import('./Viewport.tsx').then((m) => ({ default: m.Viewport })));
@@ -222,7 +222,9 @@ export function App() {
 
         <footer className="signature">
           <pre aria-hidden="true">{STAMP}</pre>
-          <span className="visually-hidden">Made by {AUTHOR}</span>
+          <span className="visually-hidden">
+            {AUTHOR}, {CREDIT}
+          </span>
         </footer>
       </aside>
     </div>

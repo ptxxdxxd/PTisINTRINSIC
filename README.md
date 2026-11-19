@@ -130,5 +130,5 @@ Apache-2.0. See [LICENSE](LICENSE).
 ```text
  .-.
 (o o)  PTisDEV
- |=|
+ |=|   made with my partner Claude
 ```

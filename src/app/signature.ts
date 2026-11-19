@@ -5,4 +5,6 @@
  */
 export const AUTHOR = 'PTisDEV';
 
-export const STAMP = [' .-.', `(o o)  ${AUTHOR}`, ' |=|'].join('\n');
+export const CREDIT = 'made with my partner Claude';
+
+export const STAMP = [' .-.', `(o o)  ${AUTHOR}`, ` |=|   ${CREDIT}`].join('\n');

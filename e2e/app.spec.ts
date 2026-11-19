@@ -167,6 +167,8 @@ test('the page fits its window', async ({ page }) => {
   expect(box.width).toBeGreaterThan(0.6 * window.width - 400);
   expect(box.height).toBeGreaterThan(300);
   // The author's stamp sits at the end of the panel.
-  await expect(page.locator('footer.signature pre')).toHaveText(/PTisDEV/);
+  await expect(page.locator('footer.signature pre')).toHaveText(
+    /PTisDEV[\s\S]*made with my partner Claude/,
+  );
   expect(problems).toEqual([]);
 });
