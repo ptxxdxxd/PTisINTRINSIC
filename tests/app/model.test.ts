@@ -233,11 +233,17 @@ describe('parseRequest', () => {
   });
   const bumpWithoutHeight = { kind: 'bump', resolution: 8, jitter: 0, seed: 1, width: 0.45 };
 
+  it.each(kinds)('passes a valid %s build request through unchanged', (kind) => {
+    const message = build(PRESETS[kind].spec, 'delaunay');
+    expect(parseRequest(message)).toEqual(message);
+  });
+
   it.each([
     [null, 'request must be an object, got null'],
     [[1], 'request must be an object, got an array'],
     [{ id: '1', type: 'spectrum' }, 'request.id must be an integer, got "1"'],
     [{ id: 1.5, type: 'spectrum' }, 'request.id must be an integer, got 1.5'],
+    [{ id: { value: 1 }, type: 'spectrum' }, 'request.id must be an integer, got an object'],
     [{ id: 1, type: 'toString' }, 'request.type must be "build", "distance" or "spectrum"'],
     [build({ kind: 'torus' }), 'request.spec.kind must be plane, bump, saddle, cap or cone'],
     [build('bump'), 'request.spec must be an object, got "bump"'],
